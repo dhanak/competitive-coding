@@ -1,0 +1,134 @@
+﻿<h1>MOBA</h1>
+Hogy mi az a MOBA, azt elolvashatjátok <a href="https://en.wikipedia.org/wiki/Multiplayer_online_battle_arena">itt</a>.
+Ebben a világban központi szerverhez csatlakozó kliensprogramokkal fogjátok a hősötöket, vagy hőseiteket irányítani. A feladatotok olyan mesterséges intelligencia létrehozása, amely a csapattársak és az ellenség mozgásához is igazodik.
+<br>
+Kétféle módja van a meccseknek:
+<li>Melee módban mindenki 1-1 hőst irányít, és az összes versenyző egyszerre játszik
+<li>Duel módban 2 versenyző méri össze az erejét, ilyenkor mind az 5 hőst egyszerre irányítják</li>
+A szerver a verseny teljes ideje alatt elérhető, melee és duel módban is tesztelhettek.
+A döntőben különböző permutációkban lejátszott "melee" meccsek határozzák meg az első 4 helyezettet.
+Ők pedig "duel" meccsekkel döntik el az egymás közötti sorrendet.
+
+<h2>Szabályok</h2>
+A játék körökre, azaz tickekre osztott, minden tickben minden játékos adhat parancsokat. 
+Minden játékos a saját csapata szemszögéből látja a játékot, a bal alsó sarokból, ami a 0,0 koordinátához közeli. A pálya minden meccsben ugyanaz, és szimmetrikus.
+A pályán lévő egységek:
+<li>Minyon, fix pályán mozognak, fix időnként újak jelennek meg. Kicsit lő és közelre.
+<li>Bázis, innét indulnak a minyonok. A játék célja az ellenfél bázisának szétlövése.
+<li>Torony, minden körben tud lőni, viszonylag nagyot.
+<li>Hős, ezeket lehet irányítani. Ha lelövik, egy idő után a bázisnál újraéled.
+<br>A hősök, tornyok és bázisok azonosítói is fixek, például a csapatod hősei mindig az 1..5 azonosítókat kapják.
+A hősök életereje és sebzése szintek (level) szerzésével növekszik, ami közös az egész csapatra. Experience pont nincs külön, helyette mindenért közvetlenül szint jár.
+Minyonok lelövése 1 szintet ér, ha az utolsó sebzést egy hős viszi be. Tornyokért 10 szint jár, akkor is, ha minyon lővi szét.
+Hősök lelövéséért nem jár szint, ezért egy hős bénázása nem okoz akkora előnyt az ellenfélnek, mint más játékokban.
+<br>
+Minden egység távolra sebez. A távolságot légvonalban mérjük, ugyebár sqrt(dx*dx+dy*dy).
+Az sqrt-t le lehet spórolni, ha távolságnégyzetekkel számolunk. Tornyok és hősöknek 13 a max távolságnégyzete. Ez egy -3..+3 négyzetet jelent, ahol csak a sarkok vannak túl messze (3*3+2*2=13 jó, 3*3+3*3=18 nem jó).
+Minyonoknak 8, ami egy -2..2 négyzetet jelent, azon belül bárhova tudnak lőni (2*2+2*2=8).
+<br>
+A tornyok és a minyonok is egyforma logika alapján keresnek célpontot maguknak. Ha az előző tickben lőtt célpont még lőtávolságban van, akkor mindenképp azt lövik.
+Különben a prioritáslista: minyon, bázis, torony, és csak utolsó a hős. Emiatt lehet a minyonok védelmében tornyot bontani.
+Ha több egyforma prioritású célpont is van, akkor a közelebbit választják, ha abból is több van, akkor a kisebb hp-jűt, és ha az is egyezik, akkor a kisebb id-jűt.
+<br>
+A minyonok fix pályán mozognak, és átlósan nem is lépnek ilyenkor. Nem lépnek egymásra. Ha emiatt megakadnak, lehetőségük van egyet lépni a fix pályán kivülre, akár átlósan is, ha onnan egy ellenfél lőtávolságba kerül. Ez egy szélesebb frontvonal kialakulását jelenti.
+<br>
+A hősök bármikor léphetnek átlósan is. Nincs ütközés, csak a célmezőn ne legyen fal. A hősök és a minyonok is vagy lépnek, vagy lőnek egy ticken belül.
+Ha lejár az időlimit, a bázisok hp-ja dönt. Ha egyenlő, akkor a meccs döntetlen. (lásd pontozás)
+<br>
+Sebzés, hp és egyéb konstansokat megtaláljátok a parser.h-ban. Ha nem világos valami, érdemes a debug.log-ot megnézni. Ez elég nagyra tud nőni, időnként érdemes törölni.
+
+<h2>Szimuláció</h2>
+A tick végrehajtásának sorrendje:
+<li>Hősök attack parancsainak végrehajtása, sorrendjük nem befolyásolja az eredményt
+<li>Legyőzött egységek eltünnek
+<li>Hősök move parancsainak végrehajtása, itt is mindegy a sorrend, nincs ütközés
+<li>Minyonok és tornyok lőnek
+<li>Legyőzött egységek eltünnek
+<li>Minyonok mozognak
+<li>Hősök megkapják a tick alatt szerzett új szintet
+<li>Hősök feléledése</li>
+
+<h2>Protokoll</h2>
+Kaptok egy csomó kódot, ami elintézi. A MYCLIENT mintájára a CLIENT-ből kell leszármazni.
+A logint és a ping-pongot a CLIENT osztály elintézi. A jelszavatok be van írva a GetPassword()-be.
+Ellenfelet a GetPreferredOpponents átírásával lehet választani, ami lehet "duel", "test", vagy "melee".
+Kiválasztott ellenfelek ellen is lehet duel-ezni, vesszővel elválaszva player id lista megadásával. A "test" viewer ellen fog duel-t indítani.
+Az ellenfelek listáját és a térképet login után egyszer adja meg a szerver, ezeket players.txt és map.txt file-okba is kiírja.
+A Process-be kell az okosságot írni. A pálya leírást a PARSER osztály kezeli, a CLIENT::mParser-ben már benne lesz minden, mire a Process meghívódik.
+Azokat a hősöket tudjátok irányítani, amik a mParser.Controllers-ben 0-ás controller_id-vel szerepelnek (duelben ez az első 5).
+A Process-en belül Attack és Move függvények hívásával tudtok parancsokat kiadni.<br>
+Néhány példa kód:<br>
+<li>Melyik hőst irányítod:</li>
+<pre>
+for(auto &ctrl: mParser.Controllers)
+{
+  if (ctrl.controller_id == 0)
+  {
+    MAP_OBJECT *pHero = mParser.GetUnitByID(ctrl.hero_id);
+    if (pHero == NULL) continue; // respawning
+</pre>
+<li>Lőtávolságban lévő ellenségre lő:</li>
+<pre>
+for (auto &p : mParser.Units)
+{
+  if (p.side == 1 && pHero->pos.DistSquare(p.pos)<=HERO_RANGE_SQ)
+  {
+    Attack(pHero->id, p.id);
+    break;
+  }
+}
+</pre>
+<li>Ellenfél bázisa felé halad:</li>
+<pre>
+Move(pHero->id, mDistCache.GetNextTowards(pHero->pos, mParser.GetUnitByID(12)->pos));
+</pre>
+<li>Hőseid sebzése:</li>
+<pre>
+int damage = int(HERO_DAMAGE_BASE + HERO_DAMAGE_PER_LEVEL*mParser.level[0]);
+</pre>
+Debuggoláshoz hasznos lehet tudni, hogy a CLIENT belül úgy működik, hogy ezeket a parancsokat a command_buffer-be rakja, a Process végén pedig visszaküldi ezt a szervernek "tick X" és "." között.
+Az Attack függvény "attack <hős_id> <célpont_id>" parancsot generál, a Move függvény pedig "move <hős_id> <x> <y>" parancsot, mást nem is lehet csinálni.
+<br>
+A válaszadásra 250ms áll rendelkezésre, de jó lenne 125ms alatt tartani, mert ha megjön mindegyik játékostól a válasz, akkor a szerver nem várja ki a 250ms-t.
+<br>
+Úttervezéshez kaptok egy DISTCACHE nevű osztályt, ami konstans időben tud távolságot mondani, mert előre letárolta az összes pontpárra. A következő lépés mindig az, amerre csökken a távolság a célig.
+<br>
+Egyszerre maximum 5 viewerrel és 5 klienssel tudtok csatlakozni, ez segíti a debuggolást is, és tudtok duel és melee klienseket is egyszerre futtatni. Ehhez a GetPassword()-ben és a viewer.ini-ben a jelszó végén lévő #1-es suffix-et módosítsátok #2..#5 közötti értékre. A viewer ahhoz a klienshez csatlakozik, amelyikkel megegyezik a suffix-e.
+Egy suffix-szel csak 1-1 kliens és viewer csatlakozhat. Duel és viewer elleni teszt meccsből több is mehet egyszerre.
+<br>Melee meccsből csak egy indul, csapatonként csak egy kliens tud ebbe becsatlakozni. A verseny alatt néha több hőst is tudtok irányítani melee módban is, mert a hiányzó hősök irányítását a szerver szétosztja.
+Meccs közben becsatlakozó vagy kilépő kliensek miatt az irányítás menet közben is változhat. Természetesen a döntőben nem lesz ilyen, a kieső kliensek irányítás nélkül maradnak.
+
+<h2>Megjelenítő</h2>
+Inkább svájci bicska. Ha "test"-et választasz a GetPreferredOpponents-ben, akkor ezzel tudsz játszani a saját kliensed ellen. Ha más ellen játszol, ezzel tudod nyomon követni.
+Indítási paraméterként log filet megadva vissza tudod azt játszani. Logot a kliens és a viewer is készít debug.log néven.
+Ha vágólapra másolsz egy ticknyi adatot, "clipboard" indítási paraméterrel meg tudod nézni vele.
+<br>Billentyű parancsok replay módban:
+<li>Ctrl-C: kimásolja a megjelenített tick adatait
+<li>Ctrl-V: vágólapról tick megjelenítése
+<li>, és .: előző/következő tick
+<li>space: pause/resume
+<li>balra és jobbra nyíl: 50 tick ugrás vissza/előre
+<li>P és N: előző/következő meccs</li>
+<br>Irányítás játék módban:<br>
+Bal klikkel lehet hőst kijelölni. 'Q' kijelöli az összes hőst egyszerre. Jobb klikkel lehet támadni ellenfélre vagy üres helyre.
+Ellenfélre támadásnál odamegy és lövi. Üres helyre támadás okos attack-move parancsot hajt végre, ami tornyok elől biztonságban marad. Ellenfél közelébe kerülve támadja.
+<br>
+Új meccs indulásakor automatikusan elindítja a hősöket a "init_targets.txt"-ben megadott pozíciókra. Ezt bátran módosítsátok a különböző felállások teszteléséhez.
+<br>
+Ctrl-C és Ctrl-V ilyenkor is működik. A kimásolt adatokat kliens debuggolásra is lehet használni, "test.txt" fileba kell a kliens mellé rakni, ami induláskor beolvassa és lefuttatja, mintha a szervertől jött volna.
+<br>
+A space billentyűvel át lehet lépni replay módba, az épp futó meccset vissza lehet pörgetni. ESC billentyűvel lehet visszalépni játék módba.
+<br>
+Az "F" billentyűvel teszt módan feladhatjátok a meccset.
+
+<h2>Pontozás</h2>
+A verseny alatt duel meccsekből Élő-pontokat lehet gyűjteni. Ez ad egy sorrendet a döntőre, de amúgy nem számít a végeredménybe. Ettől függetlenül tilos kézzel bármilyen módon irányítani a kliensedet a döntőn kívüli versenyekben is.
+Akik nem játszottak legalább 5 duel meccset, a lista végére kerülnek ("-" látszik a pontjuk mellett).
+<br>
+A verseny végén a döntőben meccs pontokat lehet gyűjteni. Az első 20 melee meccsen mindenki egyszerre játszik. Ezek leosztása előre meghatározott, a perm.txt-ben található. A "0"-ás azonosító az Élő pontokból kialakult sorrend első helyezettje, "1" a második, stb.
+Ezek után a meccs pontok alapján az első 4 helyezett újra játszik egymás ellen egy teljes kör duelt duplázott pontokkal (ez összesen 20+6 meccs). Az összeadott meccs pontok döntik el a végső sorrendet.
+Bár döntetlen helyezés valószínűtlen, ezeket duel-lel döntjük el, ahol már a hős szint is számít, ha ismét döntetlen lenne az eredmény.
+<br>Bázis lerombolásával nyert meccsért 1.00+(hátralévő tick)/1200 pont jár. Ha timeouttal ér véget a meccs 1200 ticknél, akkor a bázisok életereje dönti el a nyertest.
+A pontszám a vesztes bázisának hiányzó hp-ja osztva a max hp-val, tehát 1-nél kisebb. Egyenlőség esetén nem jár pont. A verseny alatti Élő pontra menő duel-eknél ez a pont a súlyozásba számít bele.
+<br>Verseny alatt játszatok bátran egymás ellen. Melee módban nem változnak az Élő pontok, de duel-t is nyugodtan indítsatok félkész verziókkal. Az Élő pontoknál sokkal fontosabb, hogy igazi környezetben teszteljetek. Látnotok kell, hogyan működik a stratégiátok a többiek ellen, vagy éppen hogyan tudtok kooperálni, amikor egy csapatban vagytok.
+<br>A döntőre hozzatok egy laptopot, amin 2 példányban fut a programotok. Ha lassan haladnak a melee meccsek, párhuzamosan 2-t fogunk futtatni. Az opponent beállítások ilyenkor nem számítanak.

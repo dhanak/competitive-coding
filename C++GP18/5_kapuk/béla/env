@@ -1,0 +1,7 @@
+
+g++ -O2 ../checker/checker.cc -o checker
+g++ -O2 ../generator/generator.cc -o generator
+
+# for i in `cd in && ls *.in`; do o="${i%in}out"; echo $i $o; ./a.out <in/$i >/dev/null; done
+# for i in `cd in && ls *.in`; do o="${i%in}out"; echo $i $o; ./a.out <in/$i >out/$o; done 2> os
+# for i in `cd in && ls *.in`; do f="${i%.in}"; ./checker in/$i out/$f.out > out/$f.score; cat out/$f.score; done > oc

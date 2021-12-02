@@ -1,0 +1,22 @@
+players 20
+10 0 1500 0 Taylor Swift fanclub
+11 0 1500 0 A kis hableány ellenségei
+12 0 1500 0 Syntax Error
+13 0 1500 0 The Hypnotoad
+14 0 1500 0 Digital Hammer
+15 0 1500 0 asdf
+16 0 1500 0 A kis hableány barátai
+17 0 1500 0 Vendég csapat
+18 0 1500 0 DuckTypo
+19 0 1500 0 livmadmun
+20 0 1461 1 nagyon jó a LUNA
+21 0 1809 1 DR in da House
+22 0 1157 1 PDBS Seniors
+23 0 1732 1 ANIP
+24 0 1344 1 DBeast
+25 0 1493 0 Format C++
+26 0 1465 1 LVIS
+27 0 1632 1 AMK
+28 0 1392 1 Daisho
+29 0 1515 1 LÁB
+.

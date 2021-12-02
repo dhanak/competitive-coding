@@ -1,0 +1,13 @@
+players 11
+10 0 1500 0 Taylor Swift fanclub
+11 0 1500 0 A kis hableány ellenségei
+12 0 1500 0 Syntax Error
+13 0 1500 0 The Hypnotoad
+14 0 1500 0 Digital Hammer
+15 0 1500 0 asdf
+16 0 1500 0 A kis hableány barátai
+17 0 1500 0 Vendég csapat
+18 0 1500 0 DuckTypo
+19 0 1500 0 livmadmun
+21 0 1500 0 DR in da House
+.

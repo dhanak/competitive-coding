@@ -1,0 +1,96 @@
+﻿<h1>Ants vs Bees</h1>
+Az elődöntő "creep" feladatából már megismerhettük a királynők takonyterítő szokásait.
+A döntőben méhkirálynők csatáznak hangyakirálynők ellen, mézet és gombafonalakat terjesztve.
+A szimulációt a központi szerver végzi, amire becsatlakozhattok teszteléshez és más csapatok elleni játékhoz.
+
+
+<h2>Szabályok</h2>
+A játék körökre, azaz tickekre osztott, minden tickben mindkét játékos adhat parancsokat. 
+Mindkét játékos a méhek szemszögéből látja a játékot, a bal felső sarokból, ami a 0,0 koordinátához közeli. A pálya minden meccsben ugyan az, és szimmetrikus.
+A queenek csak közeli mezőre tudnak creep tumort rakni, oda kell menniük előbb.
+A közeli azt jelenti, hogy 1-nél kisebb a távolsága, tehát átlós mező nem közeli. (lásd POS::IsNear).
+Creep tumort csak saját creepre lehet rakni.
+A queen tud mozogni a négy fő irányba, falak kivételével nincs ütközés. Egy mezőn állhat akármennyi queen, plusz még egy building is.
+Támadni közeli queent, hatcheryt és creep tumort tud. Egy tickben csak egy parancsot tud végrehajtani.
+Saját creepen tickenként kap 2 healthet és 1 energyt, ellenfél creepjén 2 healthet sérül. Maximum 8 queened lehet.
+A hatchery és a creep tumor terjeszti a creepet.
+A hatchery energy regenje a saját creep mérete plusz 50, ezek jó nagy számok lesznek.
+24000-be kerül egy queen, ami automatikusan keletkezik a hatchery sarkában, ha még nincs 8. 80000 a maximum energy.
+Creep tumorok is energy alapján tudnak továbbhaladni, 1 energyt kap tickenként, 60-ért tud 10 sugarú körben lerakni egy új creep tumort. Ekkor inaktívvá válik, azaz -1 lesz az energyje, és nem nő többet.
+Nyerni úgy lehet, hogy ledöntöd az ellenfél hatcheryjét, vagy több creeped van, amikor lejár az 1200-as tick limit.
+Sebzés, hp és egyéb konstansokat megtaláljátok a parser.h-ban. Ha nem világos valami, érdemes kipróbálni, vagy a "test" könyvtárban megnézni a példákat.
+
+<h2>Szimuláció</h2>
+A tick végrehajtásának sorrendje:
+<li>Queen attack, spawn, creep tumor spawn parancsok végrehajtása
+<li>Legyőzött queenek eltünnek
+<li>Queen move parancsok végrehajtása
+<li>Legyőzött creep tumorok a csak hozzájuk tartozó creep-pel együtt eltünnek
+<li>Terjed a creep
+<li>Energy/hp regen, és ellenfél creep-jén sérülnek a queenek (decay)
+<li>Decay miatt meghalt Queenek eltünnek
+<li>Új queenek születése (max 1-1)</li>
+
+<h2>Protokoll</h2>
+Kaptok egy csomó kódot, ami elintézi. A MYCLIENT mintájára a CLIENT-ből kell leszármazni, a Process-be kell az okosságot írni.
+A logint és a ping-pongot a CLIENT osztály elintézi. Az ellenfelek listáját a CLIENT::Players-be pakolja. Ellenfelet a GetPreferredOpponents átírásával lehet választani, ide space-ekkel elválasztva player id-ket lehet beírni, de gyarkolatilag mindig "any" vagy "test" lesz.
+A pálya leírást a PARSER osztály kezeli, a CLIENT::mParser-ben már benne lesz minden, mire a Process meghívódik. A válasznak a "tick X"-el kell kezdődnie és "."-tal végződni, ezt elintézi a CLIENT.
+A kettő között pedig a command_buffer tartalmát küldi, amit a Process-ben kell összeállítani, majd ezt üríti.
+A válaszadásra 250ms áll rendelkezésre, de jó lenne 125ms alatt tartani, mert ha megjön mindkét féltől a válasz, akkor a szerver nem várja ki a 250ms-t.
+Az első sebesülés előtt még ennél is gyorsabban pörgeti a játékot, amint megvan mindkét válasz, feldolgozza.
+<br>Parancsok:
+<li>queen_attack id1 id2: id1-es királynő támadja az id2-es valamit
+<li>queen_spawn id x y: királynő creep tumort rak az x,y pozícióra, 100 energybe kerül
+<li>queen_move id x y: királynő mozgatása
+<li>creep_tumor_spawn id x y: creep tumor rak másik creep tumort</li>
+A CLIENT tud magasabb szintű parancsokat is kezelni, az mUnitTarget-be kell behányni így:
+<pre>
+mUnitTarget[queen.id].c = CMD_ATTACK;
+mUnitTarget[queen.id].target_id = mParser.EnemyHatchery.id;
+</pre>
+Ez odamegy a targethez, és addig üti, amíg az meg nem hal.
+Van még CMD_SPAWN ami odamegy és rak egy creep tumort, és CMD_MOVE sima mozgásra. A command_buffer tartalmát előbb küldi, úgyhogy ha véletlenül mindkettőt használnánk, akkor se lesz gond, bár duplán fog parancsokat küldeni.
+Ezekhez a parancsokhoz szükség van útkeresésre, ezt a DISTCACHE oldja meg, ami konstans időben tud távolságot mondani, mert előre letárolta az összes pontpárra. A következő lépés mindig az, amerre csökken a távolság a célig.
+
+<h2>Egy kis segítség</h2>
+A pörgős játékok kedvéért, nomeg, hogy a stratégiára tudjatok koncentrálni, találtok egy FLEEPATH osztályt.
+Ez tickenként kiszámolja minden pontra, hogy merre kell menekülni: a lehető legrövidebb úton levisz az ellenség creepjéről, majd a legközelebbi saját creephez visz.
+Jó arra is, hogy megmondja egy adott pontra a várható creep-ből jövő sebzést.
+<pre>
+FLEEPATH FleePath;
+FleePath.CreateCreepDist(&mParser);
+for(auto &queen:mParser.Units) if (queen.side==0)
+{
+	int predicted_damage = FleePath.GetDamageOnEnemyCreep(queen.pos)*HP_DECAY_ON_ENEMY_CREEP;
+	POS p=FleePath.GetNextOffCreep(queen.pos);
+	if (p.IsValid())
+	{
+		mUnitTarget[queen.id].c = CMD_MOVE;
+		mUnitTarget[queen.id].pos = p;
+	}
+}
+</pre>
+
+<h2>Megjelenítő</h2>
+Inkább svájci bicska. Ha "test"-et választasz a GetPreferredOpponents-ben, akkor ezzel tudsz játszani a saját kliensed ellen. Ha más ellen játszol, ezzel tudod nyomon követni.
+Indítási paraméterként log filet megadva vissza tudod azt játszani.
+Ha vágólapra másolsz egy ticknyi adatot, "clipboard" indítási paraméterrel meg tudod nézni vele.
+<br>Billentyű parancsok replay módban:
+<li>Ctrl-C: kimásolja a megjelenített tick adatait
+<li>Ctrl-V: vágólapról tick megjelenítése
+<li>, és .: előző/következő tick
+<li>space: pause/resume
+<li>balra és jobbra nyíl: 50 tick ugrás vissza/előre
+<li>P és N: előző/következő meccs</li>
+<br>Irányítás játék módban:<br>
+Bal klikkel lehet kijelölni queent vagy creep tumort. 'Q' kijelöli az összes queent egyszerre. Jobb klikkel lehet queennel támadni, creep tumorral terjedni, vagy előtte meg kell nyomni, hogy mit akarsz:
+<li>C: Creep tumor spawn
+<li>A: Attack
+<li>M: Move
+<li>T: Attack-Move</li>
+Alapértelmezett az attack-move, és minden jobb-klikk után újra ez lesz az aktív. Ez olyan, hogy ha queen kerül a közelébe akkor azt üti, különben a target felé halad. Lehet pozícióra menni vagy ellenfélre támadni vele.
+
+<h2>Pontozás</h2>
+Ha timeouttal ér véget a meccs 1200 ticknél, akkor 1.00 pont jár a nyertesnek. Ha korábban, akkor a hátralévő tickszámtól függően lineáris 2 tizedesre kerekítve: 1+(1200-tick)/600. Döntetlenért fél pont jár.
+<br>A verseny alatt Élő-pontokat lehet gyűjteni. Ez ad egy sorrendet a döntőre, de amúgy nem számít a végeredménybe. Ettől függetlenül tilos kézzel bármilyen módon irányítani a kliensedet a döntőn kívüli versenyekben is.
+A döntőben meccs pontokat lehet gyűjteni. Mindenki mindenki ellen fog 1-et játszani, majd a top 4 újra játszik egy teljes kört (ez összesen 45+6 meccs). Az összeadott meccs pontok döntik el a végső sorrendet.

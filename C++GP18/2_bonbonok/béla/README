@@ -1,0 +1,13 @@
+python3 ../custom_checker.py -input_file=in/01.in -output_file=out/01.out
+
+kb kétszeresen fedik a tilék a mapet
+ma=36,sta=72,ma*2
+ma=64,sta=189,ma*2.95312
+ma=60,sta=81,ma*1.35
+ma=196,sta=593,ma*3.02551
+ma=400,sta=745,ma*1.8625
+ma=900,sta=1826,ma*2.02889
+ma=900,sta=1811,ma*2.01222
+ma=900,sta=1815,ma*2.01667
+ma=900,sta=1881,ma*2.09
+ma=900,sta=1642,ma*1.82444

@@ -1,0 +1,11 @@
+python testcase_generator.py \
+	-num_of_levels=2 \
+	-level_prefix="easy_" \
+	-min_board_size=4 \
+	-max_board_size=4 \
+	-min_num_of_pieces=3 \
+	-max_num_of_pieces=3 \
+	-min_piece_size=2 \
+	-max_piece_size=2 \
+	-modulo=5 \
+	-random_seed=12

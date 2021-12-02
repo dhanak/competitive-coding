@@ -1,0 +1,17 @@
+- lc csekket gyorsabbra (tartsa karban a számokat cella módosításkor)
+- utolsó lc-t csak akkor vizsgálja meg ha azzal le tudja zárni,
+  tudja hogy hány üres van a célig, ha az legalább annyi mint s.n, akkor
+  még nem tudja befejezni
+= üres téglalapos rendszer: egy tömör 3x1 1-es sourcékból álló blokk
+  belesejéből nincs értelme pl balra kinézni ha az már üres téglalapba
+  szaladna bele, a mostani csekk beleszámolja a blokk elemeit is.
+  > favágó módon számolva kicsit javít, megoldja a 68-ast. 42 belassul.
+x permutáció módosítása? ha egy elem nem vált be, hátrébb sorolja?
+  nem tudom hogy lehet értelmesen megfogni, egy permutációt átnézve
+  egyik elem sem válik be, melyiket kéne hátrébb sorolni?
+.
+
+			rk=k+1;
+			dump();
+
+			else std::cout << "*** can not be finished" << std::endl;

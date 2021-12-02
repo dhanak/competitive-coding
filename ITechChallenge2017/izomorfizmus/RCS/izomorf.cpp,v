@@ -1,0 +1,1503 @@
+head	1.13;
+access;
+symbols;
+locks
+	vidga:1.13; strict;
+comment	@# @;
+
+
+1.13
+date	2017.04.10.17.38.57;	author vidga;	state Exp;
+branches;
+next	1.12;
+
+1.12
+date	2017.04.10.17.02.47;	author vidga;	state Exp;
+branches;
+next	1.11;
+
+1.11
+date	2017.04.10.13.28.49;	author vidga;	state Exp;
+branches;
+next	1.10;
+
+1.10
+date	2017.04.09.18.57.41;	author vidga;	state Exp;
+branches;
+next	1.9;
+
+1.9
+date	2017.04.08.15.49.19;	author vidga;	state Exp;
+branches;
+next	1.8;
+
+1.8
+date	2017.04.07.21.36.08;	author vidga;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2017.04.07.21.05.12;	author vidga;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2017.04.07.20.41.46;	author vidga;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2017.04.07.20.30.08;	author vidga;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2017.04.03.20.30.46;	author vidga;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2017.04.03.13.41.15;	author vidga;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2017.04.03.09.49.22;	author vidga;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2017.04.03.09.43.51;	author vidga;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.13
+log
+@Summary: Get rid of rotated copies of points to reduce memory footprint
+@
+text
+@#include <algorithm>
+#include <array>
+#include <cmath>
+#include <functional>
+#include <initializer_list>
+#include <iostream>
+#include <unordered_set>
+#include <vector>
+
+//#define DEBUG
+#ifdef DEBUG
+#define check(cond) ((cond) ? (cerr<<(#cond)<<'\n',true) : false)
+#define check2(cond,prn) ((cond) ? (cerr<<(#cond)<<"\n\t"<<prn<<'\n',true) : false)
+#else
+#define check(cond) (cond)
+#define check2(cond,prn) (cond)
+#endif
+
+using namespace std;
+
+class point
+{
+public:
+	point() : D{{}}, V{{}} {}
+	point(int64_t x, int64_t y, int64_t z) : D{{}}, V{{x,y,z}} {}
+	uint64_t length_sq() const { return V[0]*V[0] + V[1]*V[1] + V[2]*V[2]; }
+	int64_t &operator[](size_t i) { return V[i]; }
+	int64_t operator[](size_t i) const { return V[i]; }
+	point &operator*=(int64_t a) { for (auto &v : V) v *= a; return *this; }
+	point &operator/=(int64_t a) { for (auto &v : V) v /= a; return *this; }
+	point &operator%=(int64_t a) { for (auto &v : V) v %= a; return *this; }
+	point &operator+=(point const &p) { for (size_t i = V.size(); i--; ) V[i] += p[i]; return *this; }
+	point &operator-=(point const &p) { for (size_t i = V.size(); i--; ) V[i] -= p[i]; return *this; }
+	point operator*(int64_t v) const { return point(*this) *= v; }
+	point operator/(int64_t v) const { return point(*this) /= v; }
+	point operator%(int64_t v) const { return point(*this) %= v; }
+	point operator+(point const &o) const { return point(*this) += o; }
+	point operator-(point const &o) const { return point(*this) -= o; }
+	bool operator==(point const &p) const { return V == p.V && D == p.D; }
+	bool operator!=(point const &p) const { return V != p.V || D != p.D; }
+	bool operator<(point const &p) const { return V < p.V || (V == p.V && D < p.D); }
+
+	array<uint,3> D;
+protected:
+	array<int64_t,3> V;
+};
+
+class matrix
+{
+public:
+	matrix() : M{{{}}} {}
+	matrix(initializer_list<initializer_list<int64_t>> init)
+	{
+		size_t r = 0;
+		for (auto vs : init)
+		{
+			size_t c = 0;
+			for (auto v : vs)
+				M[r][c++] = v;
+			r++;
+		}
+	}
+	array<int64_t,3> const &operator[](size_t r) const { return M[r]; }
+	array<int64_t,3> &operator[](size_t r) { return M[r]; }
+	matrix operator*(matrix const &o) const
+	{
+		matrix res;
+		for (int r = 0; r < 3; r++)
+			for (int c = 0; c < 3; c++)
+				for (int i = 0; i < 3; i++)
+					res[r][c] += M[r][i] * o[i][c];
+		return res;
+	}
+	point operator*(point const &p) const
+	{
+		point res;
+		for (int i = 0; i < 3; i++)
+			for (int j = 0; j < 3; j++)
+				res[i] += M[i][j] * p[j];
+		res.D = p.D;
+		return res;
+	}
+	bool operator==(matrix const &o) const { return M == o.M; }
+
+	static matrix const unit, rot_x, rot_y, rot_z;
+protected:
+	array<array<int64_t,3>,3> M;
+};
+matrix const matrix::unit{{1,0,0},{0,1,0},{0,0,1}};
+matrix const matrix::rot_x{{1,0,0},{0,0,-1},{0,1,0}};
+matrix const matrix::rot_y{{0,0,1},{0,1,0},{-1,0,0}};
+matrix const matrix::rot_z{{0,-1,0},{1,0,0},{0,0,1}};
+
+class bounding_box
+{
+public:
+	point bl, tr;
+	void include(point const &p)
+	{
+		for (uint i = 0; i < 3; ++i)
+		{
+			bl[i] = min(bl[i], p[i]);
+			tr[i] = max(tr[i], p[i]);
+		}
+	}
+	bounding_box rotate(matrix const &m)
+	{
+		bounding_box bb;
+		bb.include(m*bl);
+		bb.include(m*tr);
+		return bb;
+	}
+	bool operator==(bounding_box const &o) const { return bl == o.bl && tr == o.tr; }
+	bool operator!=(bounding_box const &o) const { return !(*this == o); }
+};
+
+ostream &operator<<(ostream &s, point const &p)
+{
+	return s << '(' << p[0] << ',' << p[1] << ',' << p[2] << ')';
+}
+
+ostream &operator<<(ostream &s, matrix const &m)
+{
+	s << '[';
+	for (size_t r = 0; r < 3; r++)
+		for (size_t c = 0; c < 3; c++)
+			s << m[r][c] << (c < 2 ? ',' : r < 2 ? ';' : ']');
+	return s;
+}
+
+ostream &operator<<(ostream &s, bounding_box const &bb)
+{
+	return s << '<' << bb.bl << ';' << bb.tr << '>';
+}
+
+class building
+{
+	friend ostream &operator<<(ostream &s, building const &b);
+	
+private:
+	typedef pair<uint,uint> point_range; // index range in points
+	typedef array<uint,4> edge; // pair of indices in points + side degree + hole degree
+	typedef pair<uint,uint> edge_range; // index range in edge_refs
+	typedef pair<uint,uint> hole_range; // index range in holes
+	
+	struct side
+	{
+		edge_range edges;
+		hole_range holes;
+		side(uint eb, uint ee, uint hb, uint he) : edges(eb,ee), holes(hb,he) {}
+	};
+
+	point center;
+	bounding_box bb;
+
+	vector<point> points;
+	vector<edge> edges;
+	vector<side> sides;
+
+	vector<uint> edge_refs;	// indices in edges, indexed by sides and holes (below)
+	vector<edge_range> holes; // index ranges in edge_refs, indexed by holes
+
+	vector<uint> sorted_points;	// indices in points, geometrically sorted
+	vector<uint> sorted_points_rev; // reverse mapping of sorted_points
+	vector<uint> sorted_edges; // indices in edges, geometrically sorted
+	vector<uint> sorted_edges_rev; // reverse mapping of sorted_edges
+
+	class canonical_edge_iterator
+	{
+	public:
+		canonical_edge_iterator(building const &_b, uint _i) : b(_b), i(_i) {}
+		canonical_edge_iterator& operator++() { ++i; return *this; }
+		uint operator*() const { return b.sorted_edges_rev[b.edge_refs[i]]; }
+		bool operator==(canonical_edge_iterator const &o) const { return i == o.i; }
+		bool operator!=(canonical_edge_iterator const &o) const { return i != o.i; }
+	private:
+		building const &b;
+		uint i;
+	};
+
+	bool edge_ranges_equal(edge_range const &er, building const &b, edge_range const &ber)
+	{
+		return er.second - er.first == ber.second - ber.first &&
+			equal(
+				canonical_edge_iterator(*this, er.first),
+				canonical_edge_iterator(*this, er.second),
+				canonical_edge_iterator(b, ber.first));
+	}
+
+	bool compare_edge_ranges(edge_range const &a, edge_range const &b)
+	{
+		return lexicographical_compare(
+			edge_refs.begin()+a.first, edge_refs.begin()+a.second,
+			edge_refs.begin()+b.first, edge_refs.begin()+b.second,
+			[this](uint a, uint b){ return sorted_edges_rev[a] < sorted_edges_rev[b]; });
+	}
+
+	void sort_edge_range(edge_range const &a)
+	{
+		sort(edge_refs.begin()+a.first, edge_refs.begin()+a.second,
+			 [this](uint a, uint b){ return sorted_edges_rev[a] < sorted_edges_rev[b]; });
+	}
+
+	edge canonical_edge(edge e) const
+	{
+		e[0] = sorted_points_rev[e[0]];
+		e[1] = sorted_points_rev[e[1]];
+		if (e[0] > e[1]) swap(e[0], e[1]);
+		return e;
+	}
+
+	void update_reverse_map(vector<uint> const &m, vector<uint> &rm)
+	{
+		rm.resize(m.size());
+		for (size_t i = m.size(); i--; )
+			rm[m[i]] = i;
+	}
+	
+	void sort_points(bool reverse = true)
+	{   // sort points in geometrical order
+		sort(sorted_points.begin(), sorted_points.end(), [this](uint a, uint b){
+				return points[a] < points[b];
+			});
+		if (reverse)
+			update_reverse_map(sorted_points, sorted_points_rev);
+	}
+
+	void sort_edges(bool reverse = true)
+	{   // sort edges according to sorted point order
+		sort(sorted_edges.begin(), sorted_edges.end(), [this](uint a, uint b){
+				return canonical_edge(edges[a]) < canonical_edge(edges[b]);
+			});
+		if (reverse)
+			update_reverse_map(sorted_edges, sorted_edges_rev);
+	}
+
+	void sort_sides()
+	{
+		for (side &s : sides)
+		{
+			sort_edge_range(s.edges);
+			for (uint h = s.holes.first; h < s.holes.second; ++h)
+			{
+				sort_edge_range(holes[h]);
+			}
+			sort(holes.begin()+s.holes.first, holes.begin()+s.holes.second,
+				 [this](edge_range const &h1, edge_range const &h2){
+					 return compare_edge_ranges(h1, h2);
+				 });
+		}
+		sort(sides.begin(), sides.end(), [this](side const &a, side const &b){
+				return compare_edge_ranges(a.edges, b.edges);
+			});
+	}
+
+	struct reftype { enum T { point, side, hole }; };
+	void add_edge_ref(uint ref, reftype::T type)
+	{
+		edge_refs.push_back(ref-1);
+		edge &e = edges[ref-1];
+		e[type+1]++;
+		points[e[0]].D[type]++;
+		points[e[1]].D[type]++;
+	}
+
+	bool rotated_identical(matrix const &rot, matrix &rot_diff, building const &other)
+	{
+		// quick center & bounding box check
+		if (check2((rot*center - other.center) % points.size() != point(),
+				   rot<<' '<<rot*center<<" vs "<<other.center))
+			return false;
+
+		bounding_box bbr = bb.rotate(rot_diff);
+		if (check2(bbr != other.bb, rot<<' '<<bbr<<" vs "<<other.bb))
+			return false;
+
+		// apply rotation on BB and all points
+		bb = bbr;
+		for (auto &p : points)
+		{
+			p = rot_diff*p;
+		}
+		rot_diff = matrix::unit;
+		
+		return check_points_and_all(other);
+	}
+
+	template <class T, class Compare>
+	void collect_equal_ranges(vector<uint> const &sorted, vector<T> &objects,
+							  Compare comp, vector<pair<uint,uint>> &equals)
+	{
+		uint start, end;
+		for (start = 0, end = 1; end < sorted.size(); ++end)
+		{
+			if (!comp(objects[sorted[start]], objects[sorted[end]]))
+			{
+				if (start+1 != end)
+				{
+					equals.emplace_back(start, end);
+				}
+				start = end;
+			}
+		}
+		if (start+1 != end)
+		{
+			equals.emplace_back(start, end);
+		}
+	}
+
+	template <class Iter1, class Iter2>
+	bool test_permutations(Iter1 begin, Iter1 end, Iter2 sorted, building const &other,
+						   function<bool(building&, building const&)> test)
+	{
+		auto it = begin;
+		for (; it != end; it++)
+		{
+			sort(sorted+it->first, sorted+it->second);
+		}
+		while (1)
+		{
+			if (it == end)
+			{
+				if (test(*this, other))
+					return true;
+			}
+			else if (next_permutation(sorted+it->first, sorted+it->second))
+			{
+				it = end;
+				continue;
+			}
+			if (it == begin)
+				return false;
+			--it;
+		}
+	}
+
+	bool check_points_and_all(building const &other)
+	{
+		sort_points(false);
+		for (uint N = points.size(); N--; )
+		{
+			if (check2(points[sorted_points[N]] != other.points[other.sorted_points[N]],
+					   /*rot<<' '<<*/sorted_points[N]<<' '<<other.sorted_points[N]))
+			{
+				//for (N = points.size(); N--; )
+				//	cerr<<points[sorted_points[N]]<<other.points[other.sorted_points[N]]<<endl;
+				return false;
+			}
+		}
+		vector<point_range> equal_points;
+		collect_equal_ranges(sorted_points, points, equal_to<point const &>(), equal_points);
+		return test_permutations(equal_points.begin(), equal_points.end(),
+								 sorted_points.begin(), other, &building::check_edges_and_all);
+	}
+
+	bool check_edges_and_all(building const &other)
+	{
+		// check all edges
+		update_reverse_map(sorted_points, sorted_points_rev);
+		sort_edges(false);
+		for (uint K = edges.size(); K--; )
+		{
+			if (check2(canonical_edge(edges[sorted_edges[K]]) !=
+					   other.canonical_edge(other.edges[other.sorted_edges[K]]),
+					   /*rot<<' '<<*/sorted_edges[K]<<' '<<other.sorted_edges[K]))
+			{
+				// for (K = edges.size(); K--; )
+				// {
+				// 	edge const &e1 = canonical_edge(edges[sorted_edges[K]]);
+				// 	edge const &e2 = other.canonical_edge(other.edges[other.sorted_edges[K]]);
+				// 	cerr<<e1.first<<','<<e1.second<<' '<<e2.first<<','<<e2.second<<endl;
+				// }
+				return false;
+			}
+		}
+
+		vector<edge_range> equal_edges;
+		collect_equal_ranges(sorted_edges, edges, [this](edge const &a, edge const &b){
+				return canonical_edge(a) == canonical_edge(b);
+			}, equal_edges);
+		return test_permutations(equal_edges.begin(), equal_edges.end(),
+								 sorted_edges.begin(), other, &building::check_sides);
+	}
+
+	bool check_sides(building const &other)
+	{
+		// check all sides
+		update_reverse_map(sorted_edges, sorted_edges_rev);
+		sort_sides();
+		for (uint P = sides.size(); P--; )
+		{
+			side const &sa = sides[P];
+			side const &sb = other.sides[P];
+			if (check(!edge_ranges_equal(sa.edges, other, sb.edges)) ||
+				check(sa.holes.second - sa.holes.first != sb.holes.second - sb.holes.first))
+				return false;
+			for (uint h = sa.holes.second - sa.holes.first; h--; )
+			{
+				if (check(!edge_ranges_equal(
+							  holes[sa.holes.first + h],
+							  other, holes[sb.holes.first + h])))
+					return false;
+			}
+		}
+		
+		return true;
+	}
+
+	void recenter()
+	{
+		uint const N = points.size();
+		for (auto p : points)
+		{
+			center += p;
+		}
+		for (auto &p : points)
+		{
+			p = p*N - center;
+			bb.include(p);
+		}
+	}
+
+	uint64_t edge_length_sq(uint i) const
+	{
+		edge const& e = edges[i];
+		return (points[e[0]] - points[e[1]]).length_sq();
+	}
+
+	bool edge_lengths_equal(building const &other)
+	{
+		unordered_multiset<uint64_t> lengths;
+		lengths.reserve(edges.size());
+		for (uint K = edges.size(); K--; )
+		{
+			//cerr << edge_length_sq(K) << ' ';
+			lengths.insert(edge_length_sq(K));
+		}
+		//cerr << '\n';
+		for (uint K = other.edges.size(); K--; )
+		{
+			//cerr << other.edge_length_sq(K) << ' ';
+			auto it = lengths.find(other.edge_length_sq(K));
+			if (it == lengths.end())
+				return false;
+			lengths.erase(it);
+		}
+		//cerr << '\n';
+		return lengths.empty();
+	}
+
+public:
+	void read()
+	{
+		uint N, K, P;
+		cin >> N;
+		points.reserve(N);
+		sorted_points.reserve(N);
+		while (N--)
+		{
+			uint64_t x, y, z;
+			cin >> x >> y >> z;
+			points.emplace_back(x, y, z);
+			sorted_points.push_back(sorted_points.size());
+		}
+		cin >> K;
+		edges.reserve(K);
+		sorted_edges.reserve(K);
+		while (K--)
+		{
+			uint a, b;
+			cin >> a >> b;
+			edges.push_back({a-1, b-1});
+			points[a-1].D[reftype::point]++;
+			points[b-1].D[reftype::point]++;
+			sorted_edges.push_back(sorted_edges.size());
+		}
+		cin >> P;
+		sides.reserve(P);
+		while (P--)
+		{
+			uint E;
+			cin >> E;
+			uint const eb = edge_refs.size();
+			while (E--)
+			{
+				uint e;
+				cin >> e;
+				add_edge_ref(e, reftype::side);
+			}
+			uint const ee = edge_refs.size();
+
+			uint H;
+			cin >> H;
+			uint const hb = holes.size();
+			while (H--)
+			{
+				uint M;
+				cin >> M;
+				uint const heb = edge_refs.size();
+				while (M--)
+				{
+					uint e;
+					cin >> e;
+					add_edge_ref(e, reftype::hole);
+				}
+				uint const hee = edge_refs.size();
+				holes.emplace_back(heb, hee);
+			}
+			uint const he = holes.size();
+			sides.emplace_back(eb, ee, hb, he);
+		}
+		recenter();
+	}
+
+	void sort_all()
+	{
+		sort_points();
+		sort_edges();
+		sort_sides();
+	}
+
+	bool isomorphic(building const &other)
+	{
+		// trivial checks
+		if (check(points.size() != other.points.size()) ||
+			check(edges.size() != other.edges.size()) ||
+			check(sides.size() != other.sides.size()) ||
+			check(edge_refs.size() != other.edge_refs.size()) ||
+			check(holes.size() != other.holes.size()) ||
+			check(!edge_lengths_equal(other)))
+			return false;
+
+		// rotation checks
+		vector<matrix> rotations;
+		matrix rot(matrix::unit);
+		matrix rot_diff(matrix::unit);
+		for (int rx = 0; rx < 4; rx++)
+		{
+			for (int ry = 0; ry < 4; ry++)
+			{
+				for (int rz = 0; rz < 4; rz++)
+				{
+					if (find(rotations.begin(), rotations.end(), rot) == rotations.end())
+					{
+						rotations.push_back(rot);
+						if (rotated_identical(rot, rot_diff, other))
+						{
+							//cerr << "Transform: " << rot << ' ' <<
+							//	(other.center-rot*center)/points.size() << "\n\n";
+							return true;
+						}
+					}
+					rot = matrix::rot_z*rot;
+					rot_diff = matrix::rot_z*rot_diff;
+				}
+				rot = matrix::rot_y*rot;
+				rot_diff = matrix::rot_y*rot_diff;
+			}
+			rot = matrix::rot_x*rot;
+			rot_diff = matrix::rot_x*rot_diff;
+		}
+		return false;
+	}
+};
+
+namespace std
+{
+	template <>
+	class iterator_traits<building::canonical_edge_iterator>
+	{
+	public:
+		typedef uint value_type;
+	};
+}
+
+ostream &operator<<(ostream &s, building const &b)
+{
+	s << "c:" << b.center << " bb:" << b.bb;
+	return s;
+}
+
+int main()
+{
+	uint L;
+	cin >> L;
+
+	building B1;
+	B1.read();
+	B1.sort_all();
+	
+	vector<uint> iso;
+	for (uint l = 1; l < L; ++l)
+	{
+		building B2;
+		B2.read();
+		if (B2.isomorphic(B1))
+			iso.push_back(l+1);
+	}
+	
+	for (uint i = 0; i < iso.size(); ++i)
+		cout << (i?" ":"") << iso[i];
+	cout << endl;
+	
+	return 0;
+}
+@
+
+
+1.12
+log
+@Summary: Reverted last change, as it actually worsened performance
+@
+text
+@d219 1
+a219 1
+	void sort_points(vector<point> const &pts, bool reverse = true)
+d221 2
+a222 2
+		sort(sorted_points.begin(), sorted_points.end(), [&pts](uint a, uint b){
+				return pts[a] < pts[b];
+a255 7
+	void sort_all()
+	{
+		sort_points(points);
+		sort_edges();
+		sort_sides();
+	}
+
+d266 1
+a266 1
+	bool rotated_identical(matrix const &rot, building &other)
+d270 5
+a274 3
+				   rot<<' '<<rot*center<<" vs "<<other.center) ||
+			check2(bb.rotate(rot) != other.bb,
+				   rot<<' '<<bb.rotate(rot)<<" vs "<<other.bb))
+d277 2
+a278 3
+		// check all points
+		vector<point> rot_points;
+		rot_points.reserve(points.size());
+d281 1
+a281 1
+			rot_points.push_back(rot * p);
+d283 3
+a285 1
+		return check_points_and_all(rot_points, other);
+d311 2
+a312 2
+	bool test_permutations(Iter1 begin, Iter1 end, Iter2 sorted, building &other,
+						   function<bool(building&, building&)> test)
+d337 1
+a337 1
+	bool check_points_and_all(vector<point> &pts, building &other)
+d339 2
+a340 2
+		sort_points(pts, false);
+		for (uint N = pts.size(); N--; )
+d342 1
+a342 1
+			if (check2(pts[sorted_points[N]] != other.points[other.sorted_points[N]],
+d345 2
+a346 2
+				//for (N = pts.size(); N--; )
+				//	cerr<<pts[sorted_points[N]]<<other.points[other.sorted_points[N]]<<endl;
+d351 1
+a351 1
+		collect_equal_ranges(sorted_points, pts, equal_to<point const &>(), equal_points);
+d356 1
+a356 1
+	bool check_edges_and_all(building &other)
+d385 1
+a385 1
+	bool check_sides(building &other)
+d515 8
+a522 1
+	bool isomorphic(building &other)
+a532 2
+		other.sort_all();
+
+d536 1
+d546 1
+a546 1
+						if (rotated_identical(rot, other))
+d549 1
+a549 1
+							//	(other.center-rot*center)/points.size() << endl;
+d553 2
+a554 1
+					rot = rot*matrix::rot_z;
+d556 2
+a557 1
+				rot = rot*matrix::rot_y;
+d559 2
+a560 1
+			rot = rot*matrix::rot_x;
+d589 1
+d596 1
+a596 1
+		if (B1.isomorphic(B2))
+@
+
+
+1.11
+log
+@Summary: Reduce memory usage
+@
+text
+@a20 6
+typedef uint16_t degree_t;
+typedef uint16_t index_t;
+typedef uint32_t lindex_t;
+typedef pair<index_t,index_t> index_pair_t;
+typedef pair<lindex_t,lindex_t> lindex_pair_t;
+
+d43 1
+a43 1
+	array<degree_t,3> D;
+d100 1
+a100 1
+		for (int i = 0; i < 3; ++i)
+d141 4
+a144 3
+	typedef tuple<index_pair_t,degree_t,degree_t> edge; // indices in points, side degree, hole degree
+	typedef lindex_pair_t edge_ref_range; // index range in edge_refs
+	typedef index_pair_t hole_range;	  // index range in holes
+d148 1
+a148 1
+		edge_ref_range edges;
+d150 1
+a150 1
+		side(lindex_t eb, lindex_t ee, index_t hb, index_t he) : edges(eb,ee), holes(hb,he) {}
+d160 2
+a161 2
+	vector<index_t> edge_refs; // indices in edges, indexed by sides and holes (below)
+	vector<edge_ref_range> holes; // index ranges in edge_refs, indexed by holes
+d163 4
+a166 4
+	vector<index_t> sorted_points; // indices in points, geometrically sorted
+	vector<index_t> sorted_points_rev; // reverse mapping of sorted_points
+	vector<index_t> sorted_edges; // indices in edges, geometrically sorted
+	vector<index_t> sorted_edges_rev; // reverse mapping of sorted_edges
+d171 1
+a171 1
+		canonical_edge_iterator(building const &_b, lindex_t _i) : b(_b), i(_i) {}
+d173 1
+a173 1
+		index_t operator*() const { return b.sorted_edges_rev[b.edge_refs[i]]; }
+d178 1
+a178 1
+		lindex_t i;
+d181 1
+a181 1
+	bool edge_ref_ranges_equal(edge_ref_range const &er, building const &b, edge_ref_range const &ber)
+d190 1
+a190 1
+	bool compare_edge_ref_ranges(edge_ref_range const &a, edge_ref_range const &b)
+d195 1
+a195 1
+			[this](index_t a, index_t b){ return sorted_edges_rev[a] < sorted_edges_rev[b]; });
+d198 1
+a198 1
+	void sort_edge_ref_range(edge_ref_range const &a)
+d201 1
+a201 1
+			 [this](index_t a, index_t b){ return sorted_edges_rev[a] < sorted_edges_rev[b]; });
+d206 3
+a208 4
+		index_pair_t &ends = get<0>(e);
+		ends.first = sorted_points_rev[ends.first];
+		ends.second = sorted_points_rev[ends.second];
+		if (ends.first > ends.second) swap(ends.first, ends.second);
+d212 1
+a212 1
+	void update_reverse_map(vector<index_t> const &m, vector<index_t> &rm)
+d221 1
+a221 1
+		sort(sorted_points.begin(), sorted_points.end(), [&pts](index_t a, index_t b){
+d230 1
+a230 1
+		sort(sorted_edges.begin(), sorted_edges.end(), [this](index_t a, index_t b){
+d241 2
+a242 2
+			sort_edge_ref_range(s.edges);
+			for (index_t h = s.holes.first; h < s.holes.second; ++h)
+d244 1
+a244 1
+				sort_edge_ref_range(holes[h]);
+d247 2
+a248 2
+				 [this](edge_ref_range const &h1, edge_ref_range const &h2){
+					 return compare_edge_ref_ranges(h1, h2);
+d252 1
+a252 1
+				return compare_edge_ref_ranges(a.edges, b.edges);
+d264 1
+a264 1
+	void add_edge_ref(index_t ref, reftype::T type)
+d268 3
+a270 3
+		(type==reftype::side ? get<1>(e) : get<2>(e))++;
+		points[get<0>(e).first].D[type]++;
+		points[get<0>(e).second].D[type]++;
+d293 2
+a294 2
+	void collect_equal_ranges(vector<index_t> const &sorted, vector<T> &objects,
+							  Compare comp, vector<index_pair_t> &equals)
+d296 1
+a296 1
+		index_t start, end;
+d344 1
+a344 1
+		for (size_t N = pts.size(); N--; )
+d354 1
+a354 1
+		vector<index_pair_t> equal_points;
+d365 1
+a365 1
+		for (size_t K = edges.size(); K--; )
+d381 1
+a381 1
+		vector<index_pair_t> equal_edges;
+d394 1
+a394 1
+		for (size_t P = sides.size(); P--; )
+d398 1
+a398 1
+			if (check(!edge_ref_ranges_equal(sa.edges, other, sb.edges)) ||
+d401 1
+a401 1
+			for (index_t h = sa.holes.second - sa.holes.first; h--; )
+d403 1
+a403 1
+				if (check(!edge_ref_ranges_equal(
+d415 1
+a415 1
+		size_t const N = points.size();
+d427 1
+a427 1
+	uint64_t edge_length_sq(index_t i) const
+d429 2
+a430 2
+		index_pair_t const& e = get<0>(edges[i]);
+		return (points[e.first] - points[e.second]).length_sq();
+d437 1
+a437 1
+		for (size_t K = edges.size(); K--; )
+d443 1
+a443 1
+		for (size_t K = other.edges.size(); K--; )
+d464 1
+a464 1
+			uint x, y, z;
+d476 1
+a476 1
+			edges.emplace_back(make_pair(a-1, b-1), 0, 0);
+d487 1
+a487 1
+			lindex_t const eb = edge_refs.size();
+d494 1
+a494 1
+			lindex_t const ee = edge_refs.size();
+d498 1
+a498 1
+			index_t const hb = holes.size();
+d503 1
+a503 1
+				lindex_t const heb = edge_refs.size();
+d510 1
+a510 1
+				lindex_t const hee = edge_refs.size();
+d513 1
+a513 1
+			index_t const he = holes.size();
+d567 1
+a567 1
+		typedef index_t value_type;
+a585 1
+	iso.reserve(L-1);
+@
+
+
+1.10
+log
+@Summary: Added side + hole reference counting to points to further reduce equivalence
+@
+text
+@d21 6
+d49 1
+a49 1
+	array<uint,3> D;
+d106 1
+a106 1
+		for (uint i = 0; i < 3; ++i)
+d147 3
+a149 4
+	typedef pair<uint,uint> point_range; // index range in points
+	typedef array<uint,4> edge; // pair of indices in points + side degree + hole degree
+	typedef pair<uint,uint> edge_range; // index range in edge_refs
+	typedef pair<uint,uint> hole_range; // index range in holes
+d153 1
+a153 1
+		edge_range edges;
+d155 1
+a155 1
+		side(uint eb, uint ee, uint hb, uint he) : edges(eb,ee), holes(hb,he) {}
+d165 2
+a166 2
+	vector<uint> edge_refs;	// indices in edges, indexed by sides and holes (below)
+	vector<edge_range> holes; // index ranges in edge_refs, indexed by holes
+d168 4
+a171 4
+	vector<uint> sorted_points;	// indices in points, geometrically sorted
+	vector<uint> sorted_points_rev; // reverse mapping of sorted_points
+	vector<uint> sorted_edges; // indices in edges, geometrically sorted
+	vector<uint> sorted_edges_rev; // reverse mapping of sorted_edges
+d176 1
+a176 1
+		canonical_edge_iterator(building const &_b, uint _i) : b(_b), i(_i) {}
+d178 1
+a178 1
+		uint operator*() const { return b.sorted_edges_rev[b.edge_refs[i]]; }
+d183 1
+a183 1
+		uint i;
+d186 1
+a186 1
+	bool edge_ranges_equal(edge_range const &er, building const &b, edge_range const &ber)
+d195 1
+a195 1
+	bool compare_edge_ranges(edge_range const &a, edge_range const &b)
+d200 1
+a200 1
+			[this](uint a, uint b){ return sorted_edges_rev[a] < sorted_edges_rev[b]; });
+d203 1
+a203 1
+	void sort_edge_range(edge_range const &a)
+d206 1
+a206 1
+			 [this](uint a, uint b){ return sorted_edges_rev[a] < sorted_edges_rev[b]; });
+d211 4
+a214 3
+		e[0] = sorted_points_rev[e[0]];
+		e[1] = sorted_points_rev[e[1]];
+		if (e[0] > e[1]) swap(e[0], e[1]);
+d218 1
+a218 1
+	void update_reverse_map(vector<uint> const &m, vector<uint> &rm)
+d227 1
+a227 1
+		sort(sorted_points.begin(), sorted_points.end(), [&pts](uint a, uint b){
+d236 1
+a236 1
+		sort(sorted_edges.begin(), sorted_edges.end(), [this](uint a, uint b){
+d247 2
+a248 2
+			sort_edge_range(s.edges);
+			for (uint h = s.holes.first; h < s.holes.second; ++h)
+d250 1
+a250 1
+				sort_edge_range(holes[h]);
+d253 2
+a254 2
+				 [this](edge_range const &h1, edge_range const &h2){
+					 return compare_edge_ranges(h1, h2);
+d258 1
+a258 1
+				return compare_edge_ranges(a.edges, b.edges);
+d270 1
+a270 1
+	void add_edge_ref(uint ref, reftype::T type)
+d274 3
+a276 3
+		e[type+1]++;
+		points[e[0]].D[type]++;
+		points[e[1]].D[type]++;
+d299 2
+a300 2
+	void collect_equal_ranges(vector<uint> const &sorted, vector<T> &objects,
+							  Compare comp, vector<pair<uint,uint>> &equals)
+d302 1
+a302 1
+		uint start, end;
+d350 1
+a350 1
+		for (uint N = pts.size(); N--; )
+d360 1
+a360 1
+		vector<point_range> equal_points;
+d371 1
+a371 1
+		for (uint K = edges.size(); K--; )
+d387 1
+a387 1
+		vector<edge_range> equal_edges;
+d400 1
+a400 1
+		for (uint P = sides.size(); P--; )
+d404 1
+a404 1
+			if (check(!edge_ranges_equal(sa.edges, other, sb.edges)) ||
+d407 1
+a407 1
+			for (uint h = sa.holes.second - sa.holes.first; h--; )
+d409 1
+a409 1
+				if (check(!edge_ranges_equal(
+d421 1
+a421 1
+		uint const N = points.size();
+d433 1
+a433 1
+	uint64_t edge_length_sq(uint i) const
+d435 2
+a436 2
+		edge const& e = edges[i];
+		return (points[e[0]] - points[e[1]]).length_sq();
+d443 1
+a443 1
+		for (uint K = edges.size(); K--; )
+d449 1
+a449 1
+		for (uint K = other.edges.size(); K--; )
+d470 1
+a470 1
+			uint64_t x, y, z;
+d482 1
+a482 1
+			edges.push_back({a-1, b-1});
+d493 1
+a493 1
+			uint const eb = edge_refs.size();
+d500 1
+a500 1
+			uint const ee = edge_refs.size();
+d504 1
+a504 1
+			uint const hb = holes.size();
+d509 1
+a509 1
+				uint const heb = edge_refs.size();
+d516 1
+a516 1
+				uint const hee = edge_refs.size();
+d519 1
+a519 1
+			uint const he = holes.size();
+d573 1
+a573 1
+		typedef uint value_type;
+d592 1
+@
+
+
+1.9
+log
+@Summary: Added point and edge degrees to reduce number of permutations
+@
+text
+@d24 2
+a25 2
+	point() : D(0), V{{}} {}
+	point(int64_t x, int64_t y, int64_t z) : D(0), V{{x,y,z}} {}
+d43 1
+a43 1
+	uint D;
+d119 1
+a119 1
+	return s << '(' << p[0] << ',' << p[1] << ',' << p[2] << '%' << p.D << ')';
+d263 10
+d477 2
+a478 2
+			points[a-1].D++;
+			points[b-1].D++;
+d492 1
+a492 2
+				edge_refs.push_back(e-1);
+				edges[e-1][2]++;
+d508 1
+a508 2
+					edge_refs.push_back(e-1);
+					edges[e-1][3]++;
+d546 2
+a547 2
+							cerr << "Transform: " << rot << ' ' <<
+								(other.center-rot*center)/points.size() << endl;
+@
+
+
+1.8
+log
+@Summary: Forgot to add last equal range, fix this
+@
+text
+@d24 2
+a25 2
+	point() : V{{}} {}
+	point(int64_t x, int64_t y, int64_t z) : V{{x,y,z}} {}
+d39 5
+a43 3
+	bool operator==(point const &p) const { return V == p.V; }
+	bool operator!=(point const &p) const { return V != p.V; }
+	bool operator<(point const &p) const { return V < p.V; }
+d80 1
+d119 1
+a119 1
+	return s << '(' << p[0] << ',' << p[1] << ',' << p[2] << ')';
+d142 1
+a142 1
+	typedef pair<uint,uint> edge; // pair of indices in points
+d204 1
+a204 1
+	edge canonical_edge(edge const &e) const
+d206 4
+a209 4
+		uint a = sorted_points_rev[e.first];
+		uint b = sorted_points_rev[e.second];
+		if (a > b) swap(a, b);
+		return make_pair(a, b);
+d331 1
+a331 1
+	bool check_points_and_all(vector<point> &points, building &other)
+d333 2
+a334 2
+		sort_points(points, false);
+		for (uint N = points.size(); N--; )
+d336 1
+a336 1
+			if (check2(points[sorted_points[N]] != other.points[other.sorted_points[N]],
+d339 2
+a340 2
+				//for (N = points.size(); N--; )
+				//	cerr<<rot_points[sorted_points[i]]<<other.points[other.sorted_points[i]]<<endl;
+d345 1
+a345 1
+		collect_equal_ranges(sorted_points, points, equal_to<point const &>(), equal_points);
+d420 1
+a420 1
+		return (points[e.first] - points[e.second]).length_sq();
+d466 3
+a468 1
+			edges.emplace_back(a-1, b-1);
+d483 1
+d500 1
+@
+
+
+1.7
+log
+@Summary: Fix permutation enumeration
+@
+text
+@d283 2
+a284 2
+		uint start = 0;
+		for (uint end = 1; end < sorted.size(); ++end)
+d295 4
+d305 2
+a306 1
+		for (auto it = begin; it != end; it++)
+a309 1
+		auto it = end;
+d317 1
+a317 1
+			else
+d319 2
+a320 5
+				if (next_permutation(sorted+it->first, sorted+it->second))
+				{
+					it = end;
+					continue;
+				}
+d334 1
+a334 1
+					   /*rot<<*/' '<<sorted_points[N]<<' '<<other.sorted_points[N]))
+d356 1
+a356 1
+					   /*rot<<*/' '<<sorted_edges[K]<<' '<<other.sorted_edges[K]))
+@
+
+
+1.6
+log
+@Summary: Minor cleanup
+@
+text
+@d284 1
+a284 1
+		for (uint end = 1; end < sorted.size(); end++)
+d290 1
+a290 1
+					equals.emplace_back(start, end-1);
+d317 1
+a317 1
+					++it;
+@
+
+
+1.5
+log
+@Summary: Added ability to test all permutations on equivalent objects
+@
+text
+@d10 1
+a10 1
+#define DEBUG
+d216 1
+a216 1
+	void sort_points(vector<point> const &pts)
+d221 2
+a222 1
+		update_reverse_map(sorted_points, sorted_points_rev);
+d225 1
+a225 1
+	void sort_edges()
+d230 2
+a231 1
+		update_reverse_map(sorted_edges, sorted_edges_rev);
+d321 3
+a323 2
+			if (it == begin) return false;
+			else --it;
+d329 1
+a329 1
+		sort_points(points);
+d350 1
+a350 1
+		sort_edges();
+@
+
+
+1.4
+log
+@Summary: read multiple houses from stdin
+@
+text
+@d4 1
+d10 1
+a10 1
+//#define DEBUG
+d138 1
+d262 1
+a262 1
+				   rot<<' '<<rot*center<<" vs "<<other.center) &&
+d266 1
+a266 1
+		 
+a267 1
+		uint N = points.size();
+d269 1
+a269 1
+		rot_points.reserve(N);
+d274 54
+a327 2
+		sort_points(rot_points);
+		while (N--)
+d329 2
+a330 2
+			if (check2(rot_points[sorted_points[N]] != other.points[other.sorted_points[N]],
+					   rot<<' '<<sorted_points[N]<<' '<<other.sorted_points[N]))
+d337 5
+d343 2
+d346 1
+d352 1
+a352 1
+					   rot<<' '<<sorted_edges[K]<<' '<<other.sorted_edges[K]))
+d364 10
+d375 1
+@
+
+
+1.3
+log
+@Summary: minor cleanup
+@
+text
+@a48 1
+	matrix(matrix const &o) = default;
+d196 1
+a196 1
+			[this](uint a, uint b){ return sorted_edges_rev[a] < sorted_edges_rev[b]; });
+d350 1
+d353 1
+d356 1
+d362 1
+d425 1
+a438 3
+		// check rotations and translation
+		recenter();
+		other.recenter();
+a439 1
+		//cerr << *this << endl << other << endl;
+d488 4
+a491 1
+	building B1, B2;
+d493 14
+a506 2
+	B2.read();
+	cout << (B1.isomorphic(B2) ? "TRUE" : "FALSE") << endl;
+@
+
+
+1.2
+log
+@*** empty log message ***
+@
+text
+@a22 1
+	array<int64_t,3> V;
+d41 2
+a60 1
+	array<array<int64_t,3>,3> M;
+d84 1
+a132 8
+struct mapped_compare
+{
+	explicit mapped_compare(vector<uint> const &_map) : map(_map) {}
+	bool operator()(uint a, uint b) const { return map[a] < map[b]; }
+private:
+	vector<uint> const &map;
+};
+
+d191 7
+a197 1
+			mapped_compare(sorted_edges_rev));
+d235 1
+a235 2
+			sort(edge_refs.begin()+s.edges.first, edge_refs.begin()+s.edges.second,
+				 mapped_compare(sorted_edges_rev));
+d238 1
+a238 2
+				sort(edge_refs.begin()+holes[h].first, edge_refs.begin()+holes[h].second,
+					 mapped_compare(sorted_edges_rev));
+d470 2
+a471 1
+namespace std {
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d23 11
+a33 10
+	int64_t x, y, z;
+	point() : x(0), y(0), z(0) {}
+	point(int64_t _x, int64_t _y, int64_t _z) : x(_x), y(_y), z(_z) {}
+	uint64_t length_sq() const { return x*x + y*y + z*z; }
+	int64_t &operator[](size_t s) { switch(s) { case 0: return x; case 1: return y; default: return z; }; }
+	int64_t operator[](size_t s) const { return (*const_cast<point*>(this))[s]; }
+	point &operator*=(int64_t v) { x *= v; y *= v; z *= v; return *this; }
+	point &operator%=(int64_t v) { x %= v; y %= v; z %= v; return *this; }
+	point &operator+=(point const &p) { x += p.x; y += p.y; z += p.z; return *this; }
+	point &operator-=(point const &p) { x -= p.x; y -= p.y; z -= p.z; return *this; }
+d35 1
+d39 3
+a41 3
+	bool operator==(point const &p) const { return x == p.x && y == p.y && z == p.z; }
+	bool operator!=(point const &p) const { return !(*this == p); }
+	bool operator<(point const &p) const { return x < p.x || (x == p.x && (y < p.y || (y == p.y && z < p.z))); }
+d47 2
+a48 2
+	array<array<int64_t,3>,3> M{{{}}};
+	matrix() {}
+d60 1
+d83 1
+d96 5
+a100 12
+		bl.x = min(bl.x, p.x);
+		bl.y = min(bl.y, p.y);
+		bl.z = min(bl.z, p.z);
+		tr.x = max(tr.x, p.x);
+		tr.y = max(tr.y, p.y);
+		tr.z = max(tr.z, p.z);
+	}
+	void fix()
+	{
+		if (bl.x > tr.x) swap(bl.x, tr.x);
+		if (bl.y > tr.y) swap(bl.y, tr.y);
+		if (bl.z > tr.z) swap(bl.z, tr.z);
+d105 2
+a106 3
+		bb.bl = m*bl;
+		bb.tr = m*tr;
+		bb.fix();
+d115 1
+a115 2
+	s << '(' << p.x << ',' << p.y << ',' << p.z << ')';
+	return s;
+d129 1
+a129 2
+	s << "bl:" << bb.bl << " tr:" << bb.tr;
+	return s;
+d262 5
+a266 2
+		// quick bounding box check
+		if (check2(bb.rotate(rot) != other.bb, rot<<' '<<bb.rotate(rot)<<" vs "<<other.bb))
+d309 1
+a309 1
+		for (uint H = sides.size(); H--; )
+d311 2
+a312 2
+			side const &sa = sides[H];
+			side const &sb = other.sides[H];
+d446 1
+a446 1
+		matrix rot = matrix::unit;
+d456 1
+a456 2
+						if ((rot*center - other.center) % points.size() == point() &&
+							rotated_identical(rot, other))
+d458 2
+a459 1
+							//cerr << "Winning rotation: " << rot << endl;
+d484 1
+a484 1
+	s << "c:" << b.center << ' ' << b.bb;
+@

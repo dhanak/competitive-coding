@@ -1,0 +1,185 @@
+﻿<h1>Dominion</h1>
+A játék MOBA környezetben játszódik, hősökkel harcolhattok egymás ellen, a cél 3 torony elfoglalása és megtartása. Hogy mi az a MOBA, azt elolvashatjátok <a href="https://en.wikipedia.org/wiki/Multiplayer_online_battle_arena">itt</a>.
+<br/>
+A szerver a verseny teljes ideje alatt elérhető, közben háromféle módon tudtok meccset játszani:
+<li>Teszteléshez a viewer-rel tudtok kattingatással a saját kliensetek ellen játszani
+<li>Duel módban más csapatok ellen játszhattok, ilyenkor mind az 5 hőst egyszerre irányítjátok
+<li>Melee meccsből csak egy fut a szerveren, ebbe kapcsolódtok be, 1-5 hőst irányítotok, résztvevőktől függően
+</li>
+A döntőben különböző permutációkban lejátszott "melee" meccsek határozzák meg az első 4 helyezettet. Mivel 10 csapat van, itt mindenki egy hőst irányít.
+A top 4 "duel" meccsekkel véglegesítik az egymás közötti sorrendet.
+
+<h2>Szabályok</h2>
+A játék körökre, azaz tickekre osztott, minden tickben minden játékos adhat parancsokat. 
+Minden játékos a saját csapata szemszögéből látja a játékot, a bal alsó sarokból, ami a 0,0 koordinátához közeli. A pálya minden meccsben ugyanaz, és szimmetrikus.
+A pályán lévő elemek:
+<li>Hős, ezeket lehet irányítani. Ha lelövik, egy idő után a bázisnál újraéled.
+<li>Torony, ezeket kell elfoglalni, hősökre nem lőnek.
+<li>Tárgyak, ezeket fel lehet szedni
+</li>
+A bázis nincs jelölve, csak életereje van (hp), nem is lehet lőni rá. A pálya 31x31-es, map.txt-ben megtalálható. A bázis körül erőtér van, melyet az első 30 tick alatt nem lehet elhagyni. Az ellenfél bázisának erőterébe pedig nem lehet belépni.
+<br>
+A hősök egyformák, a grafika csak megkülönböztetést szolgálja. Távolra sebeznek, légvonalban mérve a távolság sqrt(dx*dx+dy*dy), de helyette mindenhol a négyzete szerepel, így egész számokkal kell csak számolni.
+A hatótávolságának négyzete 13, ez egy -3..+3 négyzetet jelent, ahol csak a sarkok vannak túl messze (3*3+2*2=13 jó, 3*3+3*3=18 nem jó). A sebzés alapból 5, de a tárgyak változtatják.
+<br>
+Tárgyak:
+<li>Armor (pajzs): csökkenti a sebződést 60%-kal
+<li>Crossbow (számszeríj): duplázza a sebzésed
+<li>Hammer (kalapács): saját tornyot lehet vele javítgatni
+<li>Potion (ital): egyszer használható, gyógyítani lehet vele, magadat vagy másokat
+<li>Bomb (bomba): egyszer használható, területre ható támadást biztosít (távolságnégyzet<=2, átlós szomszédra is hat)
+</li>
+A földön mezőnként egy tárgy lehet csak.
+Fix helyen jelennek meg, fix időben.
+Minden hősnél egy tárgy lehet egyszerre.
+Ha egy hős tárggyal hal meg, a tárgy elveszik.
+Felhasználás, vagy elvesztés után 30 tick-kel megjelenik újra.
+Minden tárgyból 2 van, a "side" mezője tesz különbséget közöttük, pl ha követni akarjuk, mikor jelenik meg újra. Az ellenség oldalán lévő tárgyakat is fel lehet venni.
+<br>A hősök és tornyok azonosítói fixek, például a csapatod hősei mindig az 1..5 azonosítókat kapják.
+Toronyokat lövéssel lehet elfoglalni.
+Különlegessége, hogy körönként legfeljebb 5-öt sebződik, tehát felesleges többen támadni egy tornyot. Ha hp-je eléri a 0-t, átáll a te oldaladra, és azonnal felgyógyul maximumra.
+Az elején a tornyok semlegesek, ilyenkor ha az ellenfél lövi őket, nálad az hp növekedésként látszódik, és akkor áll át az ellenség oldalára, ha a maximum hp kétszeresét eléri.
+Minden szimmetrikus, ezt ők úgy látják, mintha 0-ra verték volna le.
+Minden körben minden torony, ami nem semleges, 1-et sebez az ellenség bázisába.
+<br>
+Hősök lelövéséért nem jár semmi, ezért egy hős bénázása nem okoz akkora előnyt az ellenfélnek, mint más játékokban. A lelőtt hős 50 tickig marad halott, utána a bázisnál éled újra.
+A hősöknek van pontszáma is, ami a meccs alatti összes sebzés és gyógyítás, ez csak érdekességképp van megjelenítve a viewerben a hp mellett.
+<br>
+Minden hős tickenként egy parancsot adhat ki, az első paraméter mindíg a hős id-ja:
+<li>move id x y -- mozgás, szomszédos mezőre, ami lehet átlós is. Hősök között nincs ütközés.
+<li>attack id target_id -- támadás, a target_id lehet hős, vagy torony
+<li>grab id -- tárgy felvétele (amin áll, tárgyaknak nincs id-ja)
+<li>drop id -- tárgy ledobása
+<li>blast id target_id -- bomba eldobása, csak hősre dobható (távolságnégyzet<=13, mint támadásnál, a bomba szomszédosokra is hat)
+<li>heal id target_id -- 80 hp-nyi gyógyítás, target_id csapattárs lehet, vagy magad (távolságnégyzet<=13, mint támadásnál)
+<li>repair id target_id -- target_id saját torony lehet, 5-öt gyógyít a tornyon (távolságnégyzet<=13, mint támadásnál)
+</li>
+A kiadott parancsok sorrendje nem számít, mert a végrehajtás típus szerint történik a szimulációban:
+<li>attack, blast
+<li>grab, heal, repair
+<li>drop, move
+</li>
+Csak ezek után tűnnek el a legyőzött hősök, váltanak oldalt és sebeznek a tornyok, jelennek meg a tárgyak.
+Például a heal végrehajtódik, ha a gyógyítót vagy a célpontot már lelőtték az első fázisban.
+Grab és drop esetén fordulhat elő ritkán, hogy ketten akarnak felvenni / ledobni valamit ugyanazon a pozíción, és csak az egyiknek sikerül.
+<br>
+Sebzés, hp és egyéb konstansokat megtaláljátok a parser.h-ban. Ha nem világos valami, érdemes a debug.log-ot megnézni. Ez elég nagyra tud nőni, időnként töröljétek.
+A pálya 31x31-es, map.txt-ként kimenti a kliens.
+Sima pont az üres mező, kettőspont a bázis körüli erőteret mutatja. Mivel csak a 30,30 koordináta környéki erőtérre nem tudtok bemenni, erre a PARSER::IsEnemyBaseGround-ot használjátok.
+
+<h2>Protokoll</h2>
+Kaptok egy csomó kódot, ami elintézi, így login-nel és ping-pong-gal nincs dolgotok. A MYCLIENT mintájára a CLIENT-ből kell leszármazni.
+A jelszavatok be van írva az strPassword mezőbe.
+Az ellenfelek listáját és a térképet login után egyszer adja meg a szerver, ezeket players.txt és map.txt file-okba is kiírja.
+A Process-be kell az okosságot írni. A pálya leírást a PARSER osztály kezeli, a CLIENT::mParser-ben már benne lesz minden, mire a Process meghívódik.
+Azokat a hősöket tudjátok irányítani, amik a mParser.Heroes-ben 0-ás controller_id-vel szerepelnek (duelben ez az első 5).
+A Process-en belül Attack, Blast, Repair, Heal, GrabItem, DropItem és Move függvények hívásával tudtok parancsokat kiadni.<br>
+Ha a debug.log-ból valami nem világos, a PARSER::Parse fügvényből kinézhetitek, de röviden ezeket látjátok majd:
+<li>bases: a 2 bázis hp-je
+<li>hero id side hp x y item itemside respawn controller score
+<li>action type id x y id x y: mi történt az előző tick-ben, viewer használja, nektek debuggolásnál lehet hasznos
+<li>turret id side hp x y: a side 2, ha semleges
+<li>item type side x y
+</li>
+
+Néhány példa kód:<br>
+<li>Melyik hőst irányítod:</li>
+<pre>
+for(auto &hero: mParser.Heroes)
+{
+  if (hero.controller_id == 0)
+  {
+    if (hero.hp==0) continue; // respawning
+</pre>
+<li>Lőtávolságban lévő ellenségre lő:</li>
+<pre>
+for (auto &p : mParser.Heroes)
+{
+  if (p.side == 1 && hero.pos.DistSquare(p.pos)<=HERO_RANGE_SQ)
+  {
+    Attack(hero.id, p.id);
+    break;
+  }
+}
+</pre>
+<li>Felső torony felé halad:</li>
+<pre>
+Move(hero.id, mDistCache.GetNextTowards(hero.pos, mParser.GetTurretById(11)->pos));
+</pre>
+Debuggoláshoz hasznos lehet tudni, hogy a CLIENT belül úgy működik, hogy ezeket a parancsokat a command_buffer-be rakja, a Process végén pedig visszaküldi ezt a szervernek "tick X" és "." között.
+<br>
+A válaszadásra 250ms áll rendelkezésre, de jó lenne 125ms alatt tartani, mert ha megjön mindegyik játékostól a válasz, akkor a szerver nem várja ki a 250ms-t.
+<br>
+Úttervezéshez kaptok egy DISTCACHE nevű osztályt, ami konstans időben tud távolságot mondani, mert előre letárolta az összes pontpárra. A következő lépés mindig az, amerre csökken a távolság a célig. A célpont bázisának erőtere elérhetetlen, de az ott lévő ellenfelek pozíciójára is működik úgy, hogy a legközelebbi pont felé irányít.
+<br>
+Minden csapatnak 5 kliens és 5 viewer account-ja van, amivel be tud jelentkezni, egy-egy melee ("m") és duel ("d") meccsekhez, és 3 teszt account a viewer elleni meccsekhez ("1".."3").
+Ezt az strAccount-ba kell beírni, vagy command line argumentumból is felülírható, pl "-a2". A viewer pedig a viewer.ini fileból olvassa. A viewer ahhoz a klienshez csatlakozik, amelyikkel megegyezik az accountja, tehát az "m"-mes viewer a melee meccset fogja mutatni, a "3"-mal pedig a "3"-as teszt kliens ellen lehet játszani.
+Egy accounttal csak 1 kliens csatlakozhat, tehát egyszerre csak egy duel meccset tudtok játszani.
+
+<br>Melee meccsből csak egy indul, ha van legalább 2 csapat, aki csatlakozott az "m" accountjával. A hiányzó hősök irányítását a szerver szétosztja. Akár menet közben is be lehet csatlakozni, ilyenkor valamelyik oldalon néhány hős irányítását megkapod.
+Meccs közben becsatlakozó vagy kilépő kliensek miatt az irányítás menet közben is változhat. Természetesen a döntőben nem lesz ilyen, a kieső kliensek irányítás nélkül maradnak.
+
+<h2>Megjelenítő</h2>
+Inkább svájci bicska. A 3 test account-tal ezzel tudsz játszani a saját kliensed ellen. Ha más ellen játszol, ezzel tudod nyomon követni.
+Indítási paraméterként log filet megadva vissza tudod azt játszani. Logot a kliens és a viewer is készít debug.log néven.
+Ha vágólapra másolsz egy ticknyi adatot, "clipboard" indítási paraméterrel meg tudod nézni vele.
+<br>Billentyű parancsok replay módban:
+<li>Ctrl-C: kimásolja a megjelenített tick adatait
+<li>Ctrl-V: vágólapról tick megjelenítése
+<li>S: hang ki/be kapcsolása, hangerő ini-ben van
+<li>, és .: előző/következő tick
+<li>space: pause/resume
+<li>balra és jobbra nyíl: 50 tick ugrás vissza/előre
+<li>P és N: előző/következő meccs</li>
+<br>Irányítás játék módban:<br>
+Bal klikkel lehet hőst kijelölni. 'Q' kijelöli az összes hőst egyszerre. Jobb klikkel lehet támadni ellenfélre vagy üres helyre.
+Ellenfélre támadásnál odamegy és lövi.
+Üres helyre támadás attack-move parancsot hajt végre: ellenfél közelébe kerülve támadja, különben a célpont fele mozog.
+Tárgyra kattintva felveszi. A tárgyat "D"-vel le lehet dobni, "H"-val használja a potion-t. Bombát és kalapácsot automatikusan haszálja.
+<br>
+Új meccs indulásakor automatikusan elindítja a hősöket a "init_targets.txt"-ben megadott pozíciókra. Ezt bátran módosítsátok a különböző felállások teszteléséhez.
+<br>
+Ctrl-C-vel kimásolt adatokat kliens debuggolásra is lehet használni, "test.txt" fileba kell a kliens mellé rakni, ami induláskor beolvassa és lefuttatja, mintha a szervertől jött volna.
+A controller_id-ként a viewer a csapatod id-ját kapja, nem 0-t. A Ctrl-C ezt 0-ra cseréli, ám ha kézzel másolsz a viewer.log-ból, akkor ezt neked kell megtenned.
+<br>
+A space billentyűvel át lehet lépni replay módba, az épp futó meccset vissza lehet pörgetni. ESC billentyűvel lehet visszalépni játék módba. A játék ilyenkor megy tovább a háttérben.
+<br>
+Az "F" billentyűvel teszt módan feladhatjátok a meccset.
+<br>
+Debuggoláshoz lehet marker-eket rakni a térképre. A kliensből a debug.log-ba kell írni, pl:
+<pre>
+mDebugLog << "marker " << pHero->pos.x << " " << pHero->pos.y << " hero" << pHero->id << std::endl;
+</pre>
+Ha kimásolod a tickhez tartozó adatokat ezekkel a markerekkel együtt, akkor a viewer ezeket is mutatni fogja. 
+Real timeban is lehet követni a markereket, csak meg kell adni a viewer.ini-ben a kliens logját: client_log="../client/debug.log".
+A talált markereket átmásolja a saját logjába, és visszajátszáskor is látszanak. Nincsenek szinkronizálva, kicsi elcsúszások lehetnek, de általában nem észrevehető.
+Lehet több soros is, "\\n"-nel lehet sort törni. Soronként lehet színt megadni, ha így kezdődik a sor: "#rrggbb", pl "#FF0000" a piros.
+
+<h2>Tippek, trükkök</h2>
+Egy példán keresztül megmutatom, én hogy használnám a fent leírtakat.<br>Készen vagyok az új támadó algoritmussal, a viewer ellen működik.
+Leállítom a csapat "duel" accountját használó programját, épp egy meccs közben volt, de sebaj. Elindítom a gépemről "-ad" kapcsolóval a klienst és a viewert is.
+Gyanús, hogy nem jó célpontot választott az új algoritmus. Gyorsan nyomok egy "space"-t a vieweren, visszapörgetem, látom, hogy valóban rossz.
+A klienst le is állítom, inkább elindítom az előző verziót, ami még jó volt.
+A lövés előtti pillanatot kimásolom ctrl-c-vel a viewerből. A controller_id-kat ez 0-ra cseréli, csak be kell másolnom egy test.txt nevű fileba a kliens mellé.
+Az accountot visszaírom a saját teszt accountomra, ami mondjuk "2", és elindítom. A test.txt-re adott választ kiírja a képernyőre, tényleg rossz célpontra lőtt az egyik hősöm.
+Újraindítom néhányszor különböző break pointtal, amíg megtalálom a hibát.
+
+<h2>Pontozás</h2>
+Ha lejár az időlimit (1200 tick), a bázisok hp-ja dönt. Ha egyenlő, akkor a meccs döntetlen.
+A verseny alatt duel meccsekből qualifier pontokat lehet gyűjteni. Ez ad egy sorrendet a döntőre, de amúgy nem számít a végeredménybe. Ettől függetlenül tilos kézzel bármilyen módon irányítani a kliensedet a döntőn kívüli versenyekben is.
+<br>
+A verseny végén a döntőben meccs pontokat lehet gyűjteni. Az első 20 melee meccsen mindenki egyszerre játszik. Ezek leosztása előre meghatározott, a perm.txt-ben található. A "0"-ás azonosító a qualifier pontokból kialakult sorrend első helyezettje, "1" a második, stb.
+Ezek után a meccs pontok alapján az első 4 helyezett újra játszik egymás ellen egy teljes kör duelt duplázott pontokkal (ez összesen 20+6 meccs). Az összeadott meccs pontok döntik el a végső sorrendet.
+Bár döntetlen helyezés valószínűtlen, ezeket duel-lel döntjük el.
+<br>Bázis lerombolásával nyert meccsért 1.00+(hátralévő tick)/1200 pont jár. Ha timeouttal ér véget a meccs 1200 ticknél, akkor a bázisok életereje dönti el a nyertest.
+A pontszám a vesztes bázisának hiányzó hp-ja osztva a max hp-val, tehát 1-nél kisebb. Egyenlőség esetén nem jár pont.
+<br>
+<br>Verseny alatt játszatok bátran egymás ellen.
+Melee módban nem változnak az qualifier pontok, de duel-t is nyugodtan indítsatok félkész verziókkal.
+Értelmetlenül ne adjatok másnak pontot, de ha van esélyetek nyerni, előrébb lesztek a mezőnyben, ha sokat játszotok, mert vesztésért nem jár pontlevonás.
+A viewer-t nehézkes irányítani, és gyors a játék, igazán csak mások ellen tudtok tesztelni. Látnotok kell, hogyan működik a stratégiátok a többiek ellen, vagy éppen hogyan tudtok kooperálni, amikor egy csapatban vagytok.
+<br>A döntőre hozzatok egy laptopot, amin fut a programotok, a melee accountra beállítva.
+<br>
+
+<h2>Zene</h2>
+A versenyen ezt a zenét játszottam be aláfestésnek: <a href="https://www.youtube.com/watch?v=JbDlp5VN0lo">https://www.youtube.com/watch?v=JbDlp5VN0lo</a>

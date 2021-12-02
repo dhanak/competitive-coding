@@ -1,0 +1,12 @@
+teams 10
+10 0 1480 1 Taylor Swift fanclub
+11 0 1520 1 A kis hableány ellenségei
+12 0 1500 1 Syntax Error
+13 0 1530 1 The Hypnotoad
+14 0 1510 1 Digital Hammer
+30 0 1500 0 Test1
+31 0 1500 0 Test2
+32 0 1500 0 Test3
+33 0 1500 0 Test4
+34 0 1500 0 Test5
+.
