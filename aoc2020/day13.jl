@@ -24,8 +24,9 @@ function mod_lcm(vs::AbstractVector)::Int
     isempty(vs) && return 0
     ((v1, m1), rest...) = vs
     r = map(rest) do (v, m)
-        k = findfirst(==(m), [(k * v1 + m1) % v for k in 0:v - 1]) - 1
-        return (v, k)
+        vp = v ÷ gcd(v, v1)
+        k = findfirst(==(m), [(k * v1 + m1) % v for k in 0:vp - 1]) - 1
+        return (vp, k)
     end |> mod_lcm
     return r * v1 + m1
 end
