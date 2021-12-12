@@ -2,12 +2,12 @@ test = """
     """
 
 function parse_input(input::AbstractString)
-    lines = split(input, rx"\s+"; keepempty = false)
+    lines = split(input, r"\s+"; keepempty = false)
     return
 end
 
-q1() = 0
-q2() = 0
+q1(v) = 0
+q2(v) = 0
 
 let v = parse_input(test)
     @assert q1(v) == 0
