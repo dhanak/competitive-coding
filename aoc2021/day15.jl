@@ -31,23 +31,18 @@ function dijkstra(cave::Matrix, start, stop)::Int
     p = Progress(length(cave))
     handles = similar(cave)
     costs = fill(-1, size(cave))
-    costs[1, 1] = 0
-    open = MutableBinaryHeap(Base.By(last), [(start, 0)])
+    open = BinaryMinHeap([(0, start)])
+    sizehint!(open, length(cave))
     while !isempty(open)
-        (i, ci) = pop!(open)
+        (ci, i) = pop!(open)
+        costs[i] < 0 || continue
+        costs[i] = ci
         if i == stop
             finish!(p)
             return ci
         end
         for j in neighbors(cave, i)
-            cj = ci + cave[j]
-            if costs[j] < 0
-                costs[j] = cj
-                handles[j] = push!(open, (j, cj))
-            elseif cj < costs[j]
-                costs[j] = cj
-                update!(open, handles[j], (j, cj))
-            end
+            push!(open, (ci + cave[j], j))
         end
         next!(p)
     end
