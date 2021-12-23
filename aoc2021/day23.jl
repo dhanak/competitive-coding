@@ -1,3 +1,4 @@
+using Base: splat
 using DataStructures: BinaryHeap
 
 test = """
@@ -27,34 +28,38 @@ puzzle = """
       #########
     """
 
-# extra = """
-#       #D#C#B#A#
-#       #D#B#A#C#
-#       """
+extra_lines = """
+          #D#C#B#A#
+          #D#B#A#C#
+        """
 
 function parse_input(input::AbstractString; extra::Bool = false)
     lines = split(input, '\n'; keepempty = false)
     @assert lines[1] == "#############"
     @assert lines[2] == "#...........#"
-    m1 = match(r"^###(.)#(.)#(.)#(.)###$", lines[3])
-    m2 = match(r"^  #(.)#(.)#(.)#(.)#$", lines[4])
     @assert lines[5] == "  #########"
-    @assert m1 !== nothing && m2 !== nothing
-    S = Symbol
-    extra = extra ? [[:D, :D], [:C, :B], [:B, :A], [:A, :C]] :
-        [Symbol[], Symbol[], Symbol[], Symbol[]]
-    T = Vector{Any}
-    return (left  = T(fill(nothing, 2)),               # side chamber
-            A     = T([S(m1[1]); extra[1]; S(m2[1])]), # room A
-            AB    = T([nothing]),                      # hallway
-            B     = T([S(m1[2]); extra[2]; S(m2[2])]), # room B
-            BC    = T([nothing]),                      # hallway
-            C     = T([S(m1[3]); extra[3]; S(m2[3])]), # room C
-            CD    = T([nothing]),                      # hallway
-            D     = T([S(m1[4]); extra[4]; S(m2[4])]), # room D
-            right = T(fill(nothing, 2)))               # side chamber
+    if extra
+        lines = [lines[1:3]
+                 split(extra_lines, '\n'; keepempty = false)
+                 lines[4:5]]
+    end
+    lines = [split(line[3:11], "") for line in lines[3:end - 1]] |>
+        splat(hcat) |> permutedims
+    @assert all(==("#"), lines[1:end, 1:2:9])
+    lines = lines[1:end, 2:2:8] .|> Symbol |> Matrix{Any}
+
+    return (left  = Any[nothing, nothing],
+            A     = lines[:, 1],
+            AB    = Any[nothing],
+            B     = lines[:, 2],
+            BC    = Any[nothing],
+            C     = lines[:, 3],
+            CD    = Any[nothing],
+            D     = lines[:, 4],
+            right = Any[nothing, nothing])
 end
 
+const COSTS = Dict(:A => 1, :B => 10, :C => 100, :D => 1000)
 const DISTANCES = let d = Dict((:A, :left)  => 2,
                                (:A, :AB)    => 2,
                                (:A, :B)     => 4,
@@ -83,29 +88,24 @@ const DISTANCES = let d = Dict((:A, :left)  => 2,
                                (:D, :right) => 2)
     merge!(d, Dict((b, a) => c for ((a, b), c) in d))
 end
-
-function halls()
+const PATHS = let paths = Dict(),
     places = [:left, :A, :AB, :B, :BC, :C, :CD, :D, :right]
-    halls = Dict()
+
     for from in places, to in places
         (a, b) = string.(places[clamp.(sort(indexin([from, to], places)), 2, 8)])
         path = []
         while a != b && last(a) != first(b)
-            n = last(a) + 1
-            a = "$(last(a))$(n)"
+            a = "$(last(a))$(last(a) + 1)"
             push!(path, Symbol(a))
         end
-        halls[(from, to)] = path
+        paths[(from, to)] = path
     end
-    return halls
+    paths
 end
 
-const HALLS = halls()
-const COSTS = Dict(:A => 1, :B => 10, :C => 100, :D => 1000)
-
 iscomfy(b, t) = all(v -> v === nothing || v == t, b[t])
-isfull(b, t) = all(!isnothing, b[t])
 Base.isempty(b, t) = all(isnothing, b[t])
+Base.isempty(b, from, to) = all(h -> isempty(b, h), PATHS[(from, to)])
 top(b, t) = b[t][findfirst(!isnothing, b[t])]
 
 function moves(b)::Vector
@@ -113,22 +113,19 @@ function moves(b)::Vector
     for room in [:A, :B, :C, :D]
         !iscomfy(b, room) || continue
         # from room to hallway
-        for h in [:left, :AB, :BC, :CD, :right]
-            all(h -> isempty(b, h), HALLS[(room, h)]) &&
-                append!(ms, moves(b, room, h))
+        for hall in [:left, :AB, :BC, :CD, :right]
+            isempty(b, room, hall) && append!(ms, moves(b, room, hall))
         end
-        # from room to room
+        # from room to room - not strictly necessary, but this way we can
+        # verify the solver with the official solutions
         t = top(b, room)
-        iscomfy(b, t) && all(h -> isempty(b, h), HALLS[(room, t)]) &&
-            push!(ms, move(b, room, t))
+        iscomfy(b, t) && isempty(b, room, t) && push!(ms, move(b, room, t))
     end
-
     for hall in [:left, :AB, :BC, :CD, :right]
         !isempty(b, hall) || continue
         # from hallway to room
         t = top(b, hall)
-        iscomfy(b, t) && all(h -> isempty(b, h), HALLS[(hall, t)]) &&
-            push!(ms, move(b, hall, t))
+        iscomfy(b, t) && isempty(b, hall, t) && push!(ms, move(b, hall, t))
     end
     return ms
 end
@@ -172,7 +169,7 @@ function search(b)
         (c, b, p) = pop!(h)
         hb = hash(b)
         hb ∈ closed && continue
-        isfinal(b) && return (c, p)
+        isfinal(b) && return (cost = c, path = p)
         push!(closed, hb)
         for (cm, bm, m) in moves(b)
             push!(h, (c + cm, bm, [p; m]))
@@ -199,11 +196,11 @@ let b1 = parse_input(test),
 
     check(b1, s1, 12521)
     check(b2, s2, 44169)
-    @assert search(b1)[1] == 12521
-    @assert search(b2)[1] == 44169
+    @assert search(b1).cost == 12521
+    @assert search(b2).cost == 44169
 end
 
 b1 = parse_input(puzzle)
 b2 = parse_input(puzzle; extra = true)
-println("Q1: ", search(b1)[1])
-println("Q2: ", search(b2)[1])
+println("Q1: ", search(b1).cost)
+println("Q2: ", search(b2).cost)
