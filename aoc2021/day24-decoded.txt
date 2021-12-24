@@ -1,0 +1,107 @@
+w = abcdefghijklmn
+    93997999296912 <-- largest
+    81111379141811 <-- smallest
+
+Decoded digit pairs (for z to be 0):
+z:(a+2)(b+13)(c+13)
+d = c
+z:(a+2)(b+13)(e+15)
+f = e+2
+g = b+6
+z:(a+2)(h+5)(i+16)(j+1)
+k = j-3
+l = i+7
+m = h-8
+n = a-7
+
+Decoded computations:
+a)
+w = input
+x = z % 26 + 10 != w
+z *= 25 * x + 1
+z += x * (w + 2)
+
+b)
+w = input
+x = z % 26 + 14 != w
+z *= 25 * x + 1
+z += x * (w + 13)
+
+c)
+w = input
+x = z % 26 + 14 != w
+z *= 25 * x + 1
+z += x * (w + 13)
+
+d)
+w = input
+x = z % 26 - 13 != w
+z /= 26
+z *= 25 * x + 1
+z += x * (w + 9)
+
+e)
+w = input
+x = z % 26 + 10 != w
+z *= 25 * x + 1
+z += x * (w + 15)
+
+f)
+w = input
+x = z % 26 - 13 != w
+z /= 26
+z *= 25 * x + 1
+z += x * (w + 3)
+
+g)
+w = input
+x = z % 26 - 7 != w
+z /= 26
+z *= 25 * x + 1
+z += x * (w + 6)
+
+h)
+w = input
+x = z % 26 + 11 != w
+z *= 25 * x + 1
+z += x * (w + 5)
+
+i)
+w = input
+x = z % 26 + 10 != w
+z *= 25 * x + 1
+z += x * (w + 16)
+
+j)
+w = input
+x = z % 26 + 13 != w
+z *= 25 * x + 1
+z += x * (w + 1)
+
+k)
+w = input
+x = z % 26 - 4 != w
+z /= 26
+z *= 25 * x + 1
+z += x * (w + 6)
+
+l)
+w = input
+x = z % 26 - 9 != w
+z /= 26
+z *= 25 * x + 1
+z += x * (w + 3)
+
+m)
+w = input
+x = z % 26 - 13 != w
+z /= 26
+z *= 25 * x + 1
+z += x * (w + 7)
+
+n)
+w = input
+x = z % 26 - 9 != w
+z /= 26
+z *= 25 * x + 1
+z += x * (w + 9)
