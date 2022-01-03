@@ -1,6 +1,6 @@
 using Base: splat
 using Combinatorics: combinations, permutations
-using LinearAlgebra: I
+using LinearAlgebra: I, ×
 
 function parse_input(io::IO)
     scanners = Vector{Vector{Int}}[]
@@ -23,14 +23,8 @@ end
 
 const PERMUTATIONS = [Matrix{Int}(I(3)[:, xyz]) for xyz in permutations(1:3)]
 
-const TRANSFORMATIONS = let _ = 0,
-    rotx = [[1 0 0; 0 cosd(d) -sind(d); 0 sind(d) cosd(d)] for d in 0:90:270],
-    roty = [[cosd(d) 0 sind(d); 0 1 0; -sind(d) 0 cosd(d)] for d in 90:90:270],
-    rotz = [[cosd(d) -sind(d) 0; sind(d) cosd(d) 0; 0 0 1] for d in [90, 270]]
-
-    [[Int.(rx) for rx in rotx];
-     [Int.(rx * ry) for rx in rotx for ry in roty];
-     [Int.(rx * rz) for rx in rotx for rz in rotz]]
+const TRANSFORMATIONS = let vs = Vector.(eachcol([I(3) -I(3)]))
+    [[x y (x × y)] for x in vs for y in vs if !iszero(x × y)]
 end
 
 function distances(beacons::AbstractVector)::Vector
@@ -48,11 +42,11 @@ function overlap(scanner1::AbstractVector,
     olap = map(PERMUTATIONS) do P
         intersect(dists1, [P * d for d in dists2]) |> length
     end |> maximum
-    olap >= min_overlap
+    return olap >= min_overlap
 end
 
 function overlaps(scanners::AbstractVector)::Matrix
-    return [overlap(s1, s2) |> first for s1 in scanners, s2 in scanners]
+    return [overlap(s1, s2) for s1 in scanners, s2 in scanners]
 end
 
 struct Transform
@@ -80,8 +74,7 @@ end
 function find_transforms(scanners::AbstractVector)
     olaps = overlaps(scanners)
     transforms = Vector{Any}(nothing, length(scanners))
-    transforms[1] = Transform(TRANSFORMATIONS[1], fill(0, 3))
-
+    transforms[1] = identity
     unaligned = collect(2:length(scanners))
     while !isempty(unaligned)
         aligned = setdiff(keys(scanners), unaligned)
@@ -91,7 +84,6 @@ function find_transforms(scanners::AbstractVector)
         transforms[i2] = transforms[i1] ∘ T
         setdiff!(unaligned, i2)
     end
-
     return transforms
 end
 
