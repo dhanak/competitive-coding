@@ -59,38 +59,11 @@ function parse_input(input::AbstractString; extra::Bool = false)
             right = Any[nothing, nothing])
 end
 
+const ROOMS = [:A, :B, :C, :D]
+const HALLS = [:left, :AB, :BC, :CD, :right]
 const COSTS = Dict(:A => 1, :B => 10, :C => 100, :D => 1000)
-const DISTANCES = let d = Dict((:A, :left)  => 2,
-                               (:A, :AB)    => 2,
-                               (:A, :B)     => 4,
-                               (:A, :BC)    => 4,
-                               (:A, :C)     => 6,
-                               (:A, :CD)    => 6,
-                               (:A, :D)     => 8,
-                               (:A, :right) => 8,
-                               (:B, :left)  => 4,
-                               (:B, :AB)    => 2,
-                               (:B, :BC)    => 2,
-                               (:B, :C)     => 4,
-                               (:B, :CD)    => 4,
-                               (:B, :D)     => 6,
-                               (:B, :right) => 6,
-                               (:C, :left)  => 6,
-                               (:C, :AB)    => 4,
-                               (:C, :BC)    => 2,
-                               (:C, :CD)    => 2,
-                               (:C, :D)     => 4,
-                               (:C, :right) => 4,
-                               (:D, :left)  => 8,
-                               (:D, :AB)    => 6,
-                               (:D, :BC)    => 4,
-                               (:D, :CD)    => 2,
-                               (:D, :right) => 2)
-    merge!(d, Dict((b, a) => c for ((a, b), c) in d))
-end
 const PATHS = let paths = Dict(),
     places = [:left, :A, :AB, :B, :BC, :C, :CD, :D, :right]
-
     for from in places, to in places
         (a, b) = string.(places[clamp.(sort(indexin([from, to], places)), 2, 8)])
         path = []
@@ -98,22 +71,23 @@ const PATHS = let paths = Dict(),
             a = "$(last(a))$(last(a) + 1)"
             push!(path, Symbol(a))
         end
-        paths[(from, to)] = path
+        paths[from => to] = path
     end
     paths
 end
 
+distance(from, to) = 2 * length(PATHS[from => to])
 iscomfy(b, t) = all(v -> v === nothing || v == t, b[t])
 Base.isempty(b, t) = all(isnothing, b[t])
-Base.isempty(b, from, to) = all(h -> isempty(b, h), PATHS[(from, to)])
+Base.isempty(b, from, to) = all(h -> isempty(b, h), PATHS[from => to])
 top(b, t) = b[t][findfirst(!isnothing, b[t])]
 
 function moves(b)::Vector
     ms = []
-    for room in [:A, :B, :C, :D]
+    for room in ROOMS
         !iscomfy(b, room) || continue
         # from room to hallway
-        for hall in [:left, :AB, :BC, :CD, :right]
+        for hall in HALLS
             isempty(b, room, hall) && append!(ms, moves(b, room, hall))
         end
         # from room to room - not strictly necessary, but this way we can
@@ -121,7 +95,7 @@ function moves(b)::Vector
         t = top(b, room)
         iscomfy(b, t) && isempty(b, room, t) && push!(ms, move(b, room, t))
     end
-    for hall in [:left, :AB, :BC, :CD, :right]
+    for hall in HALLS
         !isempty(b, hall) || continue
         # from hallway to room
         t = top(b, hall)
@@ -142,14 +116,13 @@ function move(b, from, to, j = nothing)
     i = findfirst(!isnothing, b[from])
     @assert i !== nothing "Cannot move from $from to $to:\n$b"
     if j === nothing
-        j = findfirst(!isnothing, b[to])
-        j = j === nothing ? length(b[to]) : j - 1
+        j = findfirst(!isnothing, [b[to]; 1]) - 1
     end
     t = b[from][i]
     ch = (; from => replace(b[from], i, nothing),
           to => replace(b[to], j, t))
     m = merge(b, ch)
-    return ((DISTANCES[(from, to)] + i + j - 2) * COSTS[t], m, (from, to, j))
+    return ((distance(from, to) + i + j) * COSTS[t], m, (from, to, j))
 end
 
 function Base.replace(v::AbstractVector{<: T}, i::Integer, x::T) where T
@@ -157,9 +130,8 @@ function Base.replace(v::AbstractVector{<: T}, i::Integer, x::T) where T
 end
 
 function isfinal(b)
-    return isempty(b, :left) && isempty(b, :AB) && isempty(b, :BC) &&
-        isempty(b, :CD) && isempty(b, :right) &&
-        iscomfy(b, :A) && iscomfy(b, :B) && iscomfy(b, :C) && iscomfy(b, :D)
+    return all(hall -> isempty(b, hall), HALLS) &&
+        all(room -> iscomfy(b, room), ROOMS)
 end
 
 function search(b)
@@ -178,17 +150,13 @@ function search(b)
 end
 
 function check(b, path, cost)
-    i = 1
-    path = copy(path)
-    while !isempty(path)
-        (from, to, j) = popfirst!(path)
+    for (step, (from, to, j)) in enumerate(path)
         m = move(b, from, to, j)
-        @assert m ∈ moves(b) "#$i $b $from $to[$j]"
-        (c, b, _) = move(b, from, to, j)
+        @assert m ∈ moves(b) "#$step $b $from $to[$j]"
+        (c, b, _) = m
         cost -= c
-        i += 1
     end
-    @assert cost == 0 "bad cost"
+    @assert cost == 0 "residual cost"
 end
 
 let b1 = parse_input(test),
