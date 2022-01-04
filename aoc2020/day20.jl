@@ -1,10 +1,8 @@
 rot(n::Int) = M  -> reduce((M, _) -> rotr90(M), 1:n; init = M)
-vflip(M::Matrix)::Matrix = M[end:-1:1, :]
-hflip(M::Matrix)::Matrix = M[:, end:-1:1]
+flip(M::Matrix)::Matrix = M[end:-1:1, :]
 
 const TRANSFORMATIONS = [[rot(i) for i in 0:3];
-                         [rot(i) ∘ vflip for i in 0:3];
-                         [rot(i) ∘ hflip for i in 0:3]]
+                         [rot(i) ∘ flip for i in 0:3]]
 
 function parse_input(file::AbstractString)
     tiles = open(file, "r") do io
@@ -53,10 +51,10 @@ left(ci::CartesianIndex) = ci - CartesianIndex(0, 1)
 
 function arrange(tiles, sides)::Matrix
     w = tiles |> keys .|> first |> unique |> length |> sqrt |> Int
-    tileset = (unmatched_tops  = unmatched(tiles, :top, :bottom),
-               matched_bottoms = matched(tiles, :bottom, :top),
-               unmatched_lefts = unmatched(tiles, :left, :right),
-               matched_rights  = matched(tiles, :right, :left),
+    tileset = (unmatched_tops  = unmatched(tiles, :top),
+               matched_bottoms = matched(tiles, :bottom),
+               unmatched_lefts = unmatched(tiles, :left),
+               matched_rights  = matched(tiles, :right),
                all             = keys(tiles),
                dict            = tiles)
     arr = Matrix{Any}(nothing, w, w)
@@ -66,15 +64,20 @@ function arrange(tiles, sides)::Matrix
     return arr
 end
 
-function unmatched(tiles, side_a, side_b)
-    return setdiff(keys(tiles), matched(tiles, side_a, side_b))
-end
+unmatched(tiles, side::Symbol) = setdiff(keys(tiles), matched(tiles, side))
 
-function matched(tiles, side_a, side_b)
+function matched(tiles, side::Symbol)
+    opp_side::Symbol = opposite(side)
     return filter(keys(tiles)) do i
-        tiles[i][side_a] ∈ [t[side_b] for (j, t) in tiles if j.id != i.id]
+        tiles[i][side] ∈ [t[opp_side] for (j, t) in tiles if j.id != i.id]
     end
 end
+
+opposite(side::Symbol)::Symbol = opposite(Val(side))
+opposite(::Val{:top}) = :bottom
+opposite(::Val{:bottom}) = :top
+opposite(::Val{:left}) = :right
+opposite(::Val{:right}) = :left
 
 function arrange!(arr::Matrix, cis, used, tileset, sides)::Bool
     isempty(cis) && return true
@@ -110,7 +113,7 @@ end
 
 q1(arr) = map(t -> t.id, corners(arr)) |> prod
 
-corners(M::Matrix)::Matrix = [M[1, 1] M[1, end]; M[end, 1] M[end, end]]
+corners(M::Matrix)::Matrix = M[[1, end], [1, end]]
 
 function monster(w::Int)::String
     m = ["..................#."
@@ -132,7 +135,7 @@ function mask_monsters(arr, tiles)::String
     mask = findall(==('#'), m)
     vimage = split(image, "")
     for i in findall(mre, image; overlap = true) .|> first
-        vimage[i .+ mask .- 1] .= "O"
+        @. vimage[i + mask - 1] = "O"
     end
     return join(vimage, "")
 end
