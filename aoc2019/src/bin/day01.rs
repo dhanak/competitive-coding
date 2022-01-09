@@ -5,7 +5,7 @@ use std::iter::successors;
 use aoc2019::utils::read_lines;
 
 fn main() {
-    let fuel: Vec<i64> = read_lines("day01.in")
+    let fuel: Vec<i64> = read_lines("input/day01.in")
         .map(|line| line.unwrap().parse::<i64>().unwrap())
         .map(|val| val / 3 - 2)
         .collect();
