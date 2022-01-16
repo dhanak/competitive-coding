@@ -1,0 +1,7 @@
+#binop_separator = "Back"
+#fn_single_line = true
+#group_imports = "StdExternalCrate"
+#imports_granularity = "Module"
+#indent_style = "Visual"
+#match_block_trailing_comma = true
+max_width = 80

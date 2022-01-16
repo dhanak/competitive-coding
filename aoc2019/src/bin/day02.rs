@@ -32,7 +32,11 @@ fn run(mem: &[usize]) -> Result<usize, ProgramError> {
     Err(ProgramError::DoesNotTerminate)
 }
 
-fn run_with(mem: &[usize], noun: usize, verb: usize) -> Result<usize, ProgramError> {
+fn run_with(
+    mem: &[usize],
+    noun: usize,
+    verb: usize,
+) -> Result<usize, ProgramError> {
     run(&[&[mem[0], noun, verb], &mem[3..]].concat())
 }
 
