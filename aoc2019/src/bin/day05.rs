@@ -7,6 +7,7 @@ enum ProgramError {
     BadLen,
     DoesNotTerminate,
     InvalidOpCode(i64),
+    InvalidMode(i64),
     BadOutput(Vec<i64>),
 }
 
@@ -32,13 +33,13 @@ fn run(mem: &[i64], input: &[i64]) -> Result<Vec<i64>, ProgramError> {
             (1, &[a, b, c, ..]) => {
                 // add
                 assert_eq!(mc, 0);
-                mem[c as usize] = par(&mem, ma, a) + par(&mem, mb, b);
+                mem[c as usize] = par(&mem, ma, a)? + par(&mem, mb, b)?;
                 ip += 4;
             }
             (2, &[a, b, c, ..]) => {
                 // mul
                 assert_eq!(mc, 0);
-                mem[c as usize] = par(&mem, ma, a) * par(&mem, mb, b);
+                mem[c as usize] = par(&mem, ma, a)? * par(&mem, mb, b)?;
                 ip += 4;
             }
             (3, &[a, ..]) => {
@@ -51,14 +52,14 @@ fn run(mem: &[i64], input: &[i64]) -> Result<Vec<i64>, ProgramError> {
             }
             (4, &[a, ..]) => {
                 // out
-                out.push(par(&mem, ma, a));
+                out.push(par(&mem, ma, a)?);
                 ip += 2;
             }
             (5 | 6, &[a, b, ..]) => {
                 // jump if true | false
-                let a = par(&mem, ma, a);
+                let a = par(&mem, ma, a)?;
                 if (opc == 5 && a != 0) || (opc == 6 && a == 0) {
-                    ip = par(&mem, mb, b) as usize;
+                    ip = par(&mem, mb, b)? as usize;
                 } else {
                     ip += 3;
                 }
@@ -66,13 +67,15 @@ fn run(mem: &[i64], input: &[i64]) -> Result<Vec<i64>, ProgramError> {
             (7, &[a, b, c, ..]) => {
                 // less than
                 assert_eq!(mc, 0);
-                mem[c as usize] = (par(&mem, ma, a) < par(&mem, mb, b)) as i64;
+                mem[c as usize] =
+                    (par(&mem, ma, a)? < par(&mem, mb, b)?) as i64;
                 ip += 4;
             }
             (8, &[a, b, c, ..]) => {
                 // equal
                 assert_eq!(mc, 0);
-                mem[c as usize] = (par(&mem, ma, a) == par(&mem, mb, b)) as i64;
+                mem[c as usize] =
+                    (par(&mem, ma, a)? == par(&mem, mb, b)?) as i64;
                 ip += 4;
             }
             (1..=8, _) => return Err(ProgramError::BadLen),
@@ -83,11 +86,11 @@ fn run(mem: &[i64], input: &[i64]) -> Result<Vec<i64>, ProgramError> {
     Err(ProgramError::DoesNotTerminate)
 }
 
-fn par(mem: &[i64], mode: i64, value: i64) -> i64 {
+fn par(mem: &[i64], mode: i64, value: i64) -> Result<i64, ProgramError> {
     match mode {
-        0 => mem[value as usize], // position mode
-        1 => value,               // immediate mode
-        _ => panic!("unrecognized parameter mode {}", mode),
+        0 => Ok(mem[value as usize]), // position mode
+        1 => Ok(value),               // immediate mode
+        _ => Err(ProgramError::InvalidMode(mode)),
     }
 }
 
