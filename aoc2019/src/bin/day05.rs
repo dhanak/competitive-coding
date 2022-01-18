@@ -117,8 +117,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         .map(|v| v.parse::<i64>())
         .collect::<Result<Vec<i64>, _>>()?;
 
-    println!("{}", q1(&mem)?);
-    println!("{}", q2(&mem)?);
+    println!("Q1: {}", q1(&mem)?);
+    println!("Q2: {}", q2(&mem)?);
     Ok(())
 }
 
