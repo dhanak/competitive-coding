@@ -2,9 +2,13 @@ extern crate aoc2019;
 
 use aoc2019::utils::read_lines;
 
-fn q1() -> i64 { 0 }
+fn q1() -> i64 {
+    0
+}
 
-fn q2() -> i64 { 0 }
+fn q2() -> i64 {
+    0
+}
 
 #[cfg(test)]
 mod tests {
