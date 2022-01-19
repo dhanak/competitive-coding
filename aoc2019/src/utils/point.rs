@@ -1,20 +1,9 @@
 use std::ops::{Add, Mul};
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct Point<T> {
     pub x: T,
     pub y: T,
-}
-
-impl<T: Copy> Copy for Point<T> {}
-
-impl<T: Default> Default for Point<T> {
-    fn default() -> Self {
-        Point {
-            x: T::default(),
-            y: T::default(),
-        }
-    }
 }
 
 impl<T: Copy + Add<Output = T>> Add for Point<T> {
