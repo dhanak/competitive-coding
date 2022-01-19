@@ -6,7 +6,10 @@ pub struct Point<T> {
     pub y: T,
 }
 
-impl<T: Copy + Add<Output = T>> Add for Point<T> {
+impl<T> Add for Point<T>
+where
+    T: Copy + Add<Output = T>,
+{
     type Output = Point<T>;
 
     fn add(self, rhs: Self) -> Self::Output {
