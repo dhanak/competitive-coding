@@ -17,36 +17,13 @@ impl<T: Default> Default for Point<T> {
     }
 }
 
-impl<T: Copy + Add<Output = T>> Add for &Point<T> {
+impl<T: Copy + Add<Output = T>> Add for Point<T> {
     type Output = Point<T>;
 
     fn add(self, rhs: Self) -> Self::Output {
         Point {
             x: self.x + rhs.x,
             y: self.y + rhs.y,
-        }
-    }
-}
-
-impl<T: Copy + Add<Output = T>> Add for Point<T> {
-    type Output = Point<T>;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        &self + &rhs
-    }
-}
-
-impl<T, S> Mul<S> for &Point<T>
-where
-    T: Copy + Mul<S, Output = T>,
-    S: Copy,
-{
-    type Output = Point<T>;
-
-    fn mul(self, scalar: S) -> Self::Output {
-        Point {
-            x: self.x * scalar,
-            y: self.y * scalar,
         }
     }
 }
@@ -59,7 +36,10 @@ where
     type Output = Point<T>;
 
     fn mul(self, scalar: S) -> Self::Output {
-        &self * scalar
+        Point {
+            x: self.x * scalar,
+            y: self.y * scalar,
+        }
     }
 }
 
