@@ -10,7 +10,7 @@ fn path_to_coords(path: &str) -> Vec<Point<i64>> {
     let mut wire = vec![Point::default()];
     for p in path.split(',') {
         let l: i64 = p[1..].parse().unwrap();
-        let m = match p.chars().nth(0).unwrap() {
+        let m = match p.chars().next().unwrap() {
             'L' => Point { x: -1, y: 0 },
             'R' => Point { x: 1, y: 0 },
             'U' => Point { x: 0, y: -1 },

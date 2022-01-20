@@ -47,7 +47,7 @@ fn q1(mem: &[usize]) -> Result<usize, ProgramError> {
 fn q2(mem: &[usize], goal: usize) -> Result<usize, ProgramError> {
     for noun in 0..=99 {
         for verb in 0..=99 {
-            if Ok(goal) == run_with(&mem, noun, verb) {
+            if Ok(goal) == run_with(mem, noun, verb) {
                 return Ok(100 * noun + verb);
             }
         }

@@ -100,7 +100,7 @@ fn par(mem: &[i64], mode: i64, value: i64) -> Result<i64, ProgramError> {
 fn run_sequence(mem: &[i64], seq: &[i64]) -> i64 {
     // create channels
     let (mut txs, mut rxs): (Vec<Sender<i64>>, Vec<Receiver<i64>>) =
-        repeat_with(|| channel()).take(seq.len() + 1).unzip();
+        repeat_with(channel).take(seq.len() + 1).unzip();
 
     // initialize amplifiers with phase sequence
     for (tx, &n) in zip(&txs, seq) {
