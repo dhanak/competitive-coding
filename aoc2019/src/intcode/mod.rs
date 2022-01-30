@@ -2,6 +2,8 @@ pub mod program_error;
 use std::error::Error;
 use std::fs::read_to_string;
 use std::iter::from_fn;
+use std::ops::{Index, IndexMut};
+use std::slice::SliceIndex;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
@@ -17,14 +19,20 @@ mod tests;
 const TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Intcode(Vec<i64>);
+pub struct Intcode {
+    mem: Vec<i64>,
+    pub trigger: Option<i64>,
+}
 
 impl<T> From<&[T]> for Intcode
 where
     T: Copy + Into<i64>,
 {
     fn from(source: &[T]) -> Intcode {
-        Intcode(source.iter().map(|v| (*v).into()).collect())
+        Intcode {
+            mem: source.iter().map(|v| (*v).into()).collect(),
+            trigger: None,
+        }
     }
 }
 
@@ -37,6 +45,26 @@ where
     }
 }
 
+impl<Idx> Index<Idx> for Intcode
+where
+    Idx: SliceIndex<[i64]>,
+{
+    type Output = Idx::Output;
+
+    fn index(&self, index: Idx) -> &Self::Output {
+        &self.mem[index]
+    }
+}
+
+impl<Idx> IndexMut<Idx> for Intcode
+where
+    Idx: SliceIndex<[i64]>,
+{
+    fn index_mut(&mut self, index: Idx) -> &mut Self::Output {
+        &mut self.mem[index]
+    }
+}
+
 impl Intcode {
     pub fn load(path: &str) -> Result<Intcode, Box<dyn Error>> {
         let input = read_to_string(path)?;
@@ -45,7 +73,7 @@ impl Intcode {
             .split(',')
             .map(|v| v.parse::<i64>())
             .collect::<Result<Vec<i64>, _>>()?;
-        Ok(Intcode(mem))
+        Ok(Intcode { mem, trigger: None })
     }
 
     pub fn run(
@@ -53,7 +81,7 @@ impl Intcode {
         rx: Receiver<i64>,
         tx: Sender<i64>,
     ) -> Result<(), Box<dyn Error>> {
-        let mem = &mut self.0;
+        let mem = &mut self.mem;
         let mut ip = 0; // instruction pointer
         let mut rb = 0; // relative base
         while ip < mem.len() {
@@ -78,6 +106,9 @@ impl Intcode {
                 }
                 (3, &[a, ..]) => {
                     // inp
+                    if let Some(v) = self.trigger {
+                        tx.send(v)?;
+                    }
                     ma.write(mem, a, rx.recv_timeout(TIMEOUT)?)?;
                     ip += 2;
                 }

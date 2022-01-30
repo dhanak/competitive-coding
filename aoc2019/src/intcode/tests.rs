@@ -5,6 +5,17 @@ fn test_run(mut prog: Intcode, inp: &[i64], out: &[i64]) {
 }
 
 #[test]
+fn test_index() {
+    let prog = (0..10).collect::<Vec<_>>();
+    let mut code = Intcode::from(&prog[..]);
+    for (i, &v) in prog.iter().enumerate() {
+        assert_eq!(code[i], v);
+    }
+    code[0] = 2;
+    assert_eq!(code[0], 2);
+}
+
+#[test]
 fn test_equal() {
     // position mode
     let code = Intcode::from([3, 9, 8, 9, 10, 9, 4, 9, 99, -1, 8]);
