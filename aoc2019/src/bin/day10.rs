@@ -53,7 +53,7 @@ fn q2(asteroids: &[Point<i32>]) -> i32 {
     let point = asteroids
         .select_nth_unstable_by_key(199, |(angle, rank, _)| (*rank, *angle))
         .1
-        .2;
+         .2;
 
     100 * point.x + point.y
 }
