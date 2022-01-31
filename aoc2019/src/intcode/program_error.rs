@@ -7,7 +7,6 @@ pub enum ProgramError {
     DoesNotTerminate,
     InvalidOpCode(i64),
     InvalidMode(i64),
-    InvalidColor(i64),
 }
 
 impl Display for ProgramError {
