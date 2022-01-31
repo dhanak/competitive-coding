@@ -1,7 +1,6 @@
 pub mod program_error;
 use std::error::Error;
 use std::fs::read_to_string;
-use std::iter::from_fn;
 use std::ops::{Index, IndexMut};
 use std::slice::SliceIndex;
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -158,9 +157,9 @@ impl Intcode {
         input: &[i64],
     ) -> Result<Vec<i64>, Box<dyn Error>> {
         let ((tx, rxt), (txt, rx)) = (channel(), channel());
-        input.iter().for_each(|&code| tx.send(code).unwrap());
+        input.iter().for_each(move |&code| tx.send(code).unwrap());
         self.run(rxt, txt)?;
-        Ok(from_fn(|| rx.recv_timeout(TIMEOUT).ok()).collect())
+        Ok(rx.into_iter().collect())
     }
 
     pub fn run_in_thread(mut self) -> (Sender<i64>, Receiver<i64>) {
