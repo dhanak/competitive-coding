@@ -1,5 +1,3 @@
-extern crate aoc2019;
-
 use std::fs::read_to_string;
 
 use aoc2019::utils::{Angle, Point};

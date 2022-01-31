@@ -1,5 +1,3 @@
-extern crate aoc2019;
-
 use std::collections::HashMap;
 use std::io;
 

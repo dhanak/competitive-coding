@@ -1,5 +1,3 @@
-extern crate aoc2019;
-
 use aoc2019::utils::read_lines;
 
 fn q1() -> i64 {

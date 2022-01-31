@@ -1,5 +1,3 @@
-extern crate aoc2019;
-
 use std::iter::successors;
 
 use aoc2019::utils::read_lines;
