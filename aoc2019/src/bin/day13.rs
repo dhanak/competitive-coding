@@ -1,18 +1,25 @@
 use aoc2019::intcode::Intcode;
 
+#[cfg(debug_assertions)]
+use aoc2019::console_screen::Screen;
+
 const TRIGGER: i64 = -2;
 
 fn q1(code: Intcode) -> i64 {
     let (_, rx) = code.run_in_thread();
     let mut blocks = 0;
-    //let mut screen = Screen::new();
-    while let (Ok(_), Ok(_), Ok(tile_id)) = (rx.recv(), rx.recv(), rx.recv()) {
+    #[cfg(debug_assertions)]
+    let mut screen = Screen::<45, 26>::new();
+    while let (Ok(_x), Ok(_y), Ok(tile_id)) = (rx.recv(), rx.recv(), rx.recv())
+    {
         if tile_id == 2 {
             blocks += 1;
         }
-        //screen.update(x, y, tile_id);
+        #[cfg(debug_assertions)]
+        screen.update(_x, _y, tile_id);
     }
-    //println!("{}", screen);
+    #[cfg(debug_assertions)]
+    println!("{}", screen);
     blocks
 }
 
@@ -20,13 +27,15 @@ fn q2(mut code: Intcode) -> i64 {
     code[0] = 2; // play for free
     code.trigger = Some(TRIGGER); // signal pending input with a trigger
     let (tx, rx) = code.run_in_thread();
-    //let mut screen = Screen::new();
+    #[cfg(debug_assertions)]
+    let mut screen = Screen::<45, 26>::new();
     let mut score = 0;
     let mut paddle_x: i64 = 0;
     let mut ball_x = 0;
     while let Ok(x) = rx.recv() {
         if x == TRIGGER {
-            //println!("{}", screen);
+            #[cfg(debug_assertions)]
+            println!("{}", screen);
             tx.send((ball_x - paddle_x).signum()).unwrap();
         } else if let (Ok(y), Ok(z)) = (rx.recv(), rx.recv()) {
             if x == -1 {
@@ -37,7 +46,8 @@ fn q2(mut code: Intcode) -> i64 {
             } else if z == 4 {
                 ball_x = x;
             }
-            //screen.update(x, y, tile_id);
+            #[cfg(debug_assertions)]
+            screen.update(x, y, z);
         } else {
             panic!("failed to receive enough values!");
         }
