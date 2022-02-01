@@ -1,7 +1,7 @@
 use aoc2019::intcode::Intcode;
 
 #[cfg(debug_assertions)]
-use aoc2019::console_screen::Screen;
+use aoc2019::arcade_screen::Screen;
 
 const TRIGGER: i64 = -2;
 
