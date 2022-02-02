@@ -3,7 +3,7 @@ use std::error::Error;
 use std::fs::read_to_string;
 use std::ops::{Index, IndexMut};
 use std::slice::SliceIndex;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::{channel, Receiver, Sender, RecvTimeoutError};
 use std::thread;
 use std::time::Duration;
 
@@ -108,7 +108,11 @@ impl Intcode {
                     if let Some(v) = self.trigger {
                         tx.send(v)?;
                     }
-                    ma.write(mem, a, rx.recv_timeout(TIMEOUT)?)?;
+                    match rx.recv_timeout(TIMEOUT) {
+                        Ok(v) => ma.write(mem, a, v)?,
+                        Err(RecvTimeoutError::Disconnected) => return Ok(()),
+                        Err(err) => return Err(err.into()),
+                    }
                     ip += 2;
                 }
                 (4, &[a, ..]) => {
