@@ -3,7 +3,7 @@ use std::error::Error;
 use std::fs::read_to_string;
 use std::ops::{Index, IndexMut};
 use std::slice::SliceIndex;
-use std::sync::mpsc::{channel, Receiver, Sender, RecvTimeoutError};
+use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
 use std::thread;
 use std::time::Duration;
 
