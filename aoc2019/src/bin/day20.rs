@@ -18,7 +18,7 @@ impl Portals {
     }
 
     fn gate(&self, p: usize) -> Option<(usize, i8)> {
-        self.2.get(&p).map(|&v| v)
+        self.2.get(&p).copied()
     }
 }
 
@@ -42,7 +42,7 @@ fn find_portals(maze: &[char]) -> Portals {
         for p1 in [p0 - w, p0 - 1, p0 + 1, p0 + w] {
             if maze.get(p1 as usize) == Some(&'.') {
                 let mut code = [p0, 2 * p0 - p1];
-                code.sort();
+                code.sort_unstable();
                 let code = code.map(|i| maze[i as usize]).iter().join("");
                 let side = side(p1, w, h);
                 match portals.entry(code) {
@@ -102,7 +102,7 @@ fn moves(
 }
 
 fn solve(maze: &[char], levels: bool) -> usize {
-    let portals = find_portals(&maze);
+    let portals = find_portals(maze);
     let moves = moves(maze, &portals);
     let mut heap = BinaryHeap::from([(Reverse(0), portals.entry(), 0)]);
     let mut visited = HashSet::new();

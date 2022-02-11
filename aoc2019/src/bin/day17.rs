@@ -47,29 +47,25 @@ fn q2_walk(scaffolds: &str) -> String {
     let mut walk = String::new();
     let mut f = 0;
 
-    loop {
-        if let Some((p1, dir1)) = [dir, (dir + 3) % 4, (dir + 1) % 4]
-            .map(|d| ((p as i32 + step[d]) as usize, d))
-            .iter()
-            .find(|(p, _)| scaffolds.get(*p) == Some(&'#'))
-        {
-            match (dir1 + 4 - dir) % 4 {
-                0 => f += 1,
-                1 => {
-                    walk.push_str(&format!("{f},L,"));
-                    f = 1;
-                }
-                3 => {
-                    walk.push_str(&format!("{f},R,"));
-                    f = 1;
-                }
-                _ => panic!("Bad turn!"),
+    while let Some((p1, dir1)) = [dir, (dir + 3) % 4, (dir + 1) % 4]
+        .map(|d| ((p as i32 + step[d]) as usize, d))
+        .iter()
+        .find(|(p, _)| scaffolds.get(*p) == Some(&'#'))
+    {
+        match (dir1 + 4 - dir) % 4 {
+            0 => f += 1,
+            1 => {
+                walk.push_str(&format!("{f},L,"));
+                f = 1;
             }
-            p = *p1;
-            dir = *dir1;
-        } else {
-            break;
+            3 => {
+                walk.push_str(&format!("{f},R,"));
+                f = 1;
+            }
+            _ => panic!("Bad turn!"),
         }
+        p = *p1;
+        dir = *dir1;
     }
     walk.push_str(&format!("{f}"));
 
