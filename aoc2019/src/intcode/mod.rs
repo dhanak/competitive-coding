@@ -106,7 +106,9 @@ impl Intcode {
                 (3, &[a, ..]) => {
                     // inp
                     if let Some(v) = self.trigger {
-                        tx.send(v)?;
+                        if tx.send(v).is_err() {
+                            return Ok(());
+                        }
                     }
                     match rx.recv_timeout(TIMEOUT) {
                         Ok(v) => ma.write(mem, a, v)?,
@@ -117,7 +119,9 @@ impl Intcode {
                 }
                 (4, &[a, ..]) => {
                     // out
-                    tx.send(ma.read(mem, a))?;
+                    if tx.send(ma.read(mem, a)).is_err() {
+                        return Ok(());
+                    }
                     ip += 2;
                 }
                 (5 | 6, &[a, b, ..]) => {
