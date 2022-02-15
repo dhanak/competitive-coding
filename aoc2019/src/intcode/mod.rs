@@ -21,6 +21,7 @@ const TIMEOUT: Duration = Duration::from_secs(5);
 pub struct Intcode {
     mem: Vec<i64>,
     pub trigger: Option<i64>,
+    pub timeout: Duration,
 }
 
 impl<T> From<&[T]> for Intcode
@@ -31,6 +32,7 @@ where
         Intcode {
             mem: source.iter().map(|v| (*v).into()).collect(),
             trigger: None,
+            timeout: TIMEOUT,
         }
     }
 }
@@ -72,7 +74,11 @@ impl Intcode {
             .split(',')
             .map(|v| v.parse::<i64>())
             .collect::<Result<Vec<i64>, _>>()?;
-        Ok(Intcode { mem, trigger: None })
+        Ok(Intcode {
+            mem,
+            trigger: None,
+            timeout: TIMEOUT,
+        })
     }
 
     pub fn run(
@@ -110,7 +116,7 @@ impl Intcode {
                             return Ok(());
                         }
                     }
-                    match rx.recv_timeout(TIMEOUT) {
+                    match rx.recv_timeout(self.timeout) {
                         Ok(v) => ma.write(mem, a, v)?,
                         Err(RecvTimeoutError::Disconnected) => return Ok(()),
                         Err(err) => return Err(err.into()),
@@ -167,7 +173,7 @@ impl Intcode {
         let ((tx, rxt), (txt, rx)) = (channel(), channel());
         input.iter().for_each(move |&code| tx.send(code).unwrap());
         self.run(rxt, txt)?;
-        Ok(rx.into_iter().collect())
+        Ok(rx.iter().collect())
     }
 
     pub fn run_in_thread(mut self) -> (Sender<i64>, Receiver<i64>) {
@@ -175,4 +181,34 @@ impl Intcode {
         thread::spawn(move || self.run(rxt, txt).unwrap());
         (tx, rx)
     }
+}
+
+pub fn to_ascii(
+    (tx, rx): (Sender<i64>, Receiver<i64>),
+) -> (Sender<String>, Receiver<String>) {
+    let ((tx_in, rx_in), (tx_out, rx_out)) =
+        (channel::<String>(), channel::<String>());
+
+    thread::spawn(move || {
+        'read: while let Ok(line) = rx_in.recv() {
+            for c in line.chars() {
+                if tx.send(c as i64).is_err() {
+                    break 'read;
+                }
+            }
+        }
+    });
+
+    thread::spawn(move || {
+        let mut line = String::new();
+        while let Ok(c) = rx.recv() {
+            let c = char::from_u32(c as u32).unwrap();
+            line.push(c);
+            if c == '\n' && tx_out.send(line.split_off(0)).is_err() {
+                break;
+            }
+        }
+    });
+
+    (tx_in, rx_out)
 }
