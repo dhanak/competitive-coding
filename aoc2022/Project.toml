@@ -1,0 +1,4 @@
+name = "aoc2022"
+uuid = "d4c7ff55-6680-4066-98c1-a2c021df61ba"
+authors = ["David Hanak <dhanak@gmail.com>"]
+version = "0.1.0"
