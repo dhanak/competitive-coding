@@ -1,3 +1,5 @@
+using Test
+
 test = """
     """
 
@@ -9,9 +11,10 @@ end
 q1(v) = 0
 q2(v) = 0
 
-let v = parse_input(test)
-    @assert q1(v) == 0
-    @assert q2(v) == 0
+@testset begin
+    v = parse_input(test)
+    @test q1(v) == 0
+    @test q2(v) == 0
 end
 
 v = parse_input(read("day00.in", String))
