@@ -1,54 +1,40 @@
-using Test
+using Test: @testset, @test
 
-function parse_input(lines)
-    return map(lines) do line
-        parts = split(line, ' ')
-        op = Symbol(parts[1])
-        v = parse.(Int, parts[2:end])
-        return op => v
-    end |> execute
+function parse_input(file::AbstractString)
+    return mapreduce(append!, readlines(file); init = [1]) do line
+        (op, args...) = split(line, ' ')
+        @assert op ∈ ["noop", "addx"]
+        return op == "noop" ? [0] : [0, parse(Int, args[])]
+    end |> cumsum
 end
 
-function execute(prog)
-    return reduce(prog; init = [(1, 1)]) do states, (op, v)
-        (c, x) = states[end]
-        return [states; op == :noop ? (c + 1, x) : (c + 2, x + v[])]
+function q1(prog::Vector{Int})::Int
+    interesting = 20:40:length(prog)
+    return sum(interesting .* prog[interesting])
+end
+
+function q2(prog::Vector{Int})::Vector{String}
+    chars = map(repeat(0:39, 6), prog) do pixel, sprite
+        return sprite - 1 <= pixel <= sprite + 1 ? '#' : '.'
     end
+    return join.(Iterators.partition(chars, 40), "")
 end
 
-function q1(prog)
-    interesting = 20:40:prog[end][1]
-    return sum(interesting) do c
-        x = prog[findlast(<=(c) ∘ first, prog)][2]
-        return c * x
-    end
-end
-
-function q2(prog)
-    ip = 1
-    chars = map(1:6 * 40) do clock
-        ip += clock == prog[ip + 1][1]
-        x = prog[ip][2]
-        p = (clock - 1) % 40
-        return x -1 <= p <= x + 1 ? '#' : '.'
-    end
-    return join(chars, "")
-end
-
-function wrap(str::String, w::Integer)
-    str = replace(replace(str, '.' => "  "), '#' => "##")
-    for i in 1:2w:length(str)
-        println(str[i:i + 2w - 1])
-    end
-end
+prettify(str::String) = replace(replace(str, '.' => "  "), '#' => "##")
 
 @testset begin
-    v = parse_input(readlines("day10-test.in"))
+    v = parse_input("day10-test.in")
     @test q1(v) == 13140
-    @test q2(v) == "##..##..##..##..##..##..##..##..##..##..###...###...###...###...###...###...###.####....####....####....####....####....#####.....#####.....#####.....#####.....######......######......######......###########.......#######.......#######....."
+    @test q2(v) ==
+        split("""##..##..##..##..##..##..##..##..##..##..
+                 ###...###...###...###...###...###...###.
+                 ####....####....####....####....####....
+                 #####.....#####.....#####.....#####.....
+                 ######......######......######......####
+                 #######.......#######.......#######.....""", '\n') .|> strip
 end
 
-v = parse_input(readlines("day10.in"))
+v = parse_input("day10.in")
 println("Q1: ", q1(v))
 println("Q2:")
-wrap(q2(v), 40)
+q2(v) .|> prettify .|> println
