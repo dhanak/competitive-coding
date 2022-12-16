@@ -16,28 +16,16 @@ test = """
 """
 
 function parse_input(input::AbstractString)
-    return split(input, '\n') .|> strip
-end
-
-function q1(v)
-    return reduce(v; init = (0, 0)) do (sum, lmax), line
-        return line == "" ?
-            (0, max(sum, lmax)) :
-            (sum + parse(Int, line), lmax)
-    end |> last
-end
-
-function q2(v)
-    sums = reduce(v; init = [0]) do sums, line
-        if line == ""
-            return push!(sums, 0)
-        else
-            sums[end] += parse(Int, line)
-            return sums
-        end
+    lines = split(input, '\n') .|> strip
+    breaks = findall(isempty, lines)
+    groups = map([0; breaks], [breaks; length(lines) + 1]) do from, to
+        return parse.(Int, lines[from + 1:to - 1])
     end
-    return sum(sort!(sums)[end - 2:end])
+    return filter(!isempty, groups)
 end
+
+q1(groups) = maximum(sum.(groups))
+q2(groups) = sum(partialsort!(sum.(groups), 1:3; rev = true))
 
 let v = parse_input(test)
     @assert q1(v) == 24000
