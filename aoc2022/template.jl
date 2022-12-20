@@ -17,6 +17,8 @@ q2(v) = 0
     @test q2(v) == 0
 end
 
-v = parse_input(read("day00.in", String))
-println("Q1: ", q1(v))
-println("Q2: ", q2(v))
+@time begin
+    v = parse_input(read("day00.in", String))
+    println("Q1: ", q1(v))
+    println("Q2: ", q2(v))
+end

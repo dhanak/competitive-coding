@@ -29,6 +29,8 @@ q2(v) = v .* 811589153 |> feed |> reduce(∘, fill(mix!, 10)) |> sink
     @test q2(v) == 1623178306
 end
 
-v = parse.(Int, readlines("day20.in"))
-println("Q1: ", q1(v))
-println("Q2: ", q2(v))
+@time begin
+    v = parse.(Int, readlines("day20.in"))
+    println("Q1: ", q1(v))
+    println("Q2: ", q2(v))
+end
