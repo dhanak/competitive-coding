@@ -60,6 +60,7 @@ function solve(move::AbstractMove; board, path)::Int
 end
 
 Base.rem(a::CI, b::CI) = CI(a.I .% b.I)
+Base.div(a::CI, b::Number, mode = RoundToZero) = CI(div.(a.I, b, mode)...)
 
 struct SimpleMove <: AbstractMove
     tb::Vector
@@ -86,49 +87,79 @@ struct CubeMove <: AbstractMove
     map::Dict
 end
 
-function CubeMove(l::Integer, layout::Vector, rules::Vector)
-    l1 = l + 1
+function CubeMove(l::Integer, offset::Vector, rules::Vector)
     m = []
     flip = [3, 4, 1, 2]
     for (a, ae, b, be, r) in rules, i in 1:l
-        j = r ? l1 - i : i
-        leave = [CI(i, l1), CI(l1, i), CI(i, 0), CI(0, i)]
+        j = r ? l + 1 - i : i
+        leave = [CI(i, l + 1), CI(l + 1, i), CI(i, 0), CI(0, i)]
         enter = [CI(j, l), CI(l, j), CI(j, 1), CI(1, j)]
         append!(m, [
-            (layout[a] + leave[ae], ae) => (layout[b] + enter[be], flip[be])
-            (layout[b] + leave[be], be) => (layout[a] + enter[ae], flip[ae])
+            (offset[a] + leave[ae], ae) => (offset[b] + enter[be], flip[be])
+            (offset[b] + leave[be], be) => (offset[a] + enter[ae], flip[ae])
         ])
     end
     return CubeMove(Dict(m))
 end
 
+# rolls right, down, left and up, when start is [(i, false) for i in 1:12]
+const ROLLS = let f = false, r = true
+    [[(7, r), (9, f), (1, r), (12, f), # bottom
+      (3, r), (10, f), (5, r), (11, f), # top
+      (6, f), (2, f), (4, f), (8, f)],  # vertical sides
+     [(9, r), (6, r), (10, r), (2, r),
+      (11, r), (8, r), (12, r), (4, r),
+      (7, r), (5, r), (3, r), (1, r)],
+     [(3, r), (10, f), (5, r), (11, f),
+      (7, r), (9, f), (1, r), (12, f),
+      (2, f), (6, f), (8, f), (4, f)],
+     [(12, r), (4, r), (11, r), (8, r),
+      (10, r), (2, r), (9, r), (6, r),
+      (1, r), (3, r), (5, r), (7, r)]]
+end
+
 function CubeMove(board::Matrix)
     l = gcd(size(board)...)
-    if l == 4
-        layout = [                    CI( 0, 2l),
-                  CI(l, 0), CI(l, l), CI( l, 2l),
-                                      CI(2l, 2l), CI(2l, 3l)]
-        rules = [(1, 1, 6, 1, true),
-                 (1, 3, 3, 4, false),
-                 (1, 4, 2, 4, true),
-                 (2, 2, 5, 2, true),
-                 (2, 3, 6, 2, true),
-                 (3, 2, 5, 3, true),
-                 (4, 1, 6, 4, true)]
-    else
-        layout = [           CI( 0, l), CI(0, 2l),
-                             CI( l, l),
-                  CI(2l, 0), CI(2l, l),
-                  CI(3l, 0)]
-        rules = [(1, 3, 4, 3, true),
-                 (1, 4, 6, 3, false),
-                 (2, 1, 5, 1, true),
-                 (2, 2, 3, 1, false),
-                 (2, 4, 6, 2, false),
-                 (3, 3, 4, 4, false),
-                 (5, 2, 6, 1, false)]
+    I = CI(1, 1)
+
+    # compute offset grid
+    offset = filter(I:CI(l, l):CI(6l + 1, 6l + 1)) do i
+        return i ∈ keys(board) && board[i] != ' '
+    end .- Ref(I)
+
+    # create neighbor and edge map
+    layout = offset .÷ l .+ Ref(I)
+    grid = fill(0, maximum(layout).I)
+    grid[layout] .= 1:6
+    neighbors = []
+    edges = [[] for _ in 1:12]
+    visit = [(findfirst(isone, grid), [(i, false) for i in 1:12])]
+    for (i, cube) in visit
+        for (j, (s, r)) in enumerate(cube[1:4])
+            push!(edges[s], (grid[i], j, xor(r, j ∈ [2, 3])))
+        end
+        for n in 1:4
+            j = i + [CI(0, 1), CI(1, 0), CI(0, -1), CI(-1, 0)][n]
+            if j ∈ keys(grid) && grid[j] != 0 && j ∉ first.(visit)
+                c = [(ci, xor(rr, cr)) for (ri, rr) in ROLLS[n]
+                                       for (ci, cr) = Ref(cube[ri])]
+                push!(visit, (j, c))
+                push!(neighbors, (grid[i], grid[j]))
+            end
+        end
     end
-    return CubeMove(l, layout, rules)
+    @assert all(==(2) ∘ length, edges)
+
+    # compute neighbor edge rules
+    rules = []
+    for ((a, ae, ar), (b, be, br)) in edges
+        if (a, b) ∉ neighbors
+            push!(rules, (a, ae, b, be, xor(ar, br)))
+        end
+    end
+    @assert length(rules) == 7
+
+    return CubeMove(l, offset, rules)
 end
 
 function (move::CubeMove)(p, d)
