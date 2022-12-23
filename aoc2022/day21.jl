@@ -1,20 +1,20 @@
 using Test: @testset, @test
 
 test = """root: pppw + sjmn
-dbpl: 5
-cczh: sllz + lgvd
-zczc: 2
-ptdq: humn - dvpt
-dvpt: 3
-lfqf: 4
-humn: 5
-ljgn: 2
-sjmn: drzm * dbpl
-sllz: 4
-pppw: cczh / lfqf
-lgvd: ljgn * ptdq
-drzm: hmdt - zczc
-hmdt: 32"""
+          dbpl: 5
+          cczh: sllz + lgvd
+          zczc: 2
+          ptdq: humn - dvpt
+          dvpt: 3
+          lfqf: 4
+          humn: 5
+          ljgn: 2
+          sjmn: drzm * dbpl
+          sllz: 4
+          pppw: cczh / lfqf
+          lgvd: ljgn * ptdq
+          drzm: hmdt - zczc
+          hmdt: 32"""
 
 function parse_input(lines)
     return map(lines) do line
@@ -42,26 +42,21 @@ q1(rules) = evaluate(rules, :root)
 
 function q2(rules)
     rules = copy(rules)
-    rev = Dict(vcat([[a => f, b => f]
-                     for (f, body) in rules
-                     if body isa Tuple
-                     for (_, a, b) = Ref(body)]...))
-    needrev = [:humn]
-    for f in needrev
-        g = rev[f]
+    parent = Dict(vcat([[a => f, b => f]
+                        for (f, body) in rules
+                        if body isa Tuple
+                        for (_, a, b) = Ref(body)]...))
+    f = :humn
+    while f != :root
+        g = parent[f]
         (op, a, b) = rules[g]
         rules[f] = if g == :root
             a == f ? b : a
         else
-            push!(needrev, g)
-            if a == f
-                (inverse(op), g, b)
-            elseif op ∈ [*, +]
-                (inverse(op), g, a)
-            else
-                (op, a, g)
-            end
+            a == f ? (inverse(op), g, b) :
+                op ∈ [*, +] ? (inverse(op), g, a) : (op, a, g)
         end
+        f = g
     end
     return evaluate(rules, :humn)
 end
