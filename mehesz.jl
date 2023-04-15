@@ -36,6 +36,18 @@ const round2 = Problem(board = ["🍇   🍒🪵"
                        gather = "🍇🍒🫐🍓🍑🍌",
                        goal = '🪵')
 
+const round4 = Problem(board = ["📦    "
+                                "⚡ ⚡ 📦"
+                                "   ⚡⚡"
+                                " ⚡  📥"
+                                "  ⚡ ⚡"
+                                "     "
+                                " ⚡🐝  "],
+                       start_heading = east,
+                       avoid = "⚡",
+                       gather = "📦",
+                       goal = '📥')
+
 const moves = Dict(east => CartesianIndex(0, 1),
                    south => CartesianIndex(1, 0),
                    west => CartesianIndex(0, -1),
@@ -49,7 +61,8 @@ left(p, d) = (p, Heading((Int(d) + 3) % 4))
 function solve(problem::Problem)
     start_position = findfirst(==('🐝'), problem.board)
     start = (start_position, problem.start_heading)
-    gathered = fill(false, length(problem.gather))
+    gather = findall(∈(problem.gather), problem.board)
+    gathered = fill(false, length(gather))
     states = [(start, gathered)]
     queue = [(0, 1)]
     for (s, i) in queue
@@ -63,7 +76,7 @@ function solve(problem::Problem)
             if p1 ∉ keys(problem.board) || problem.board[p1] ∈ problem.avoid
                 continue
             end
-            gi = findfirst(==(problem.board[p1]), problem.gather)
+            gi = findfirst(==(p1), gather)
             g1 = gi === nothing ? g : let g1 = copy(g)
                 g1[gi] = true
                 g1
