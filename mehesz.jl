@@ -1,18 +1,31 @@
 @enum Heading east south west north
 
+const moves = Dict(east => CartesianIndex(0, 1),
+                   south => CartesianIndex(1, 0),
+                   west => CartesianIndex(0, -1),
+                   north => CartesianIndex(-1, 0))
+
+forward(p, d) = (p + moves[d], d)
+backward(p, d) = (p - moves[d], d)
+right(p, d) = (p, Heading((Int(d) + 1) % 4))
+left(p, d) = (p, Heading((Int(d) + 3) % 4))
+
 struct Problem
     board::Matrix{Char}
     start_heading::Heading
     avoid::Vector{Char}
     gather::Vector{Char}
     goal::Char
+    moves::Vector{Function}
 
-    function Problem(; board, start_heading, avoid, gather, goal)
+    function Problem(; board, start_heading, avoid, gather, goal,
+                     moves = [forward, backward, right, left])
         new(board .|> collect |> Base.splat(hcat) |> permutedims,
             start_heading,
             avoid |> collect,
             gather |> collect,
-            goal)
+            goal,
+            moves)
     end
 end
 
@@ -48,15 +61,18 @@ const round4 = Problem(board = ["📦    "
                        gather = "📦",
                        goal = '📥')
 
-const moves = Dict(east => CartesianIndex(0, 1),
-                   south => CartesianIndex(1, 0),
-                   west => CartesianIndex(0, -1),
-                   north => CartesianIndex(-1, 0))
-
-forward(p, d) = (p + moves[d], d)
-backward(p, d) = (p - moves[d], d)
-right(p, d) = (p, Heading((Int(d) + 1) % 4))
-left(p, d) = (p, Heading((Int(d) + 3) % 4))
+const round5 = Problem(board = ["🧸   🐝"
+                                "⚡ ⚡  "
+                                "   ⚡⚡"
+                                " ⚡  📥"
+                                "  ⚡ ⚡"
+                                "📦  📦 "
+                                " ⚡   "],
+                       start_heading = west,
+                       avoid = "⚡",
+                       gather = "📦",
+                       goal = '🧸',
+                       moves = [backward, left])
 
 function solve(problem::Problem)
     start_position = findfirst(==('🐝'), problem.board)
@@ -71,7 +87,7 @@ function solve(problem::Problem)
             return s
         end
 
-        for move in [forward, backward, right, left]
+        for move in problem.moves
             (p1, d1) = move(p, d)
             if p1 ∉ keys(problem.board) || problem.board[p1] ∈ problem.avoid
                 continue
@@ -87,4 +103,8 @@ function solve(problem::Problem)
             end
         end
     end
+end
+
+for r in [1, 2, 4, 5]
+    println("Round $r: ", solve(getfield(Main, Symbol(:round, r))))
 end
