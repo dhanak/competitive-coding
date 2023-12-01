@@ -1,0 +1,6 @@
+name = "aoc2023"
+uuid = "1e04d578-1f9b-406a-a256-6a3f45e8b332"
+authors = ["David Hanak <dhanak@gmail.com>"]
+version = "0.1.0"
+
+[deps]
