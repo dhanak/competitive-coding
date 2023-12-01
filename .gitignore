@@ -1,6 +1,10 @@
 # Created by https://www.toptal.com/developers/gitignore/api/emacs,julia,c++,rust
 # Edit at https://www.toptal.com/developers/gitignore?templates=emacs,julia,c++,rust
 
+# don't upload input files
+aoc*/*.in
+aoc*/input/*.in
+
 ### Emacs ###
 # -*- mode: gitignore; -*-
 *~
