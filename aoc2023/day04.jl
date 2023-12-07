@@ -37,7 +37,7 @@ function q2(cards)
     return sum(counts)
 end
 
-isinteractive() || begin
+if !isinteractive()
     @testset begin
         lines = filter!(!isempty, split(test, '\n'))
         input = parse_input(lines)

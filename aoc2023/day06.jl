@@ -40,7 +40,7 @@ function roots(a::Number, b::Number, c::Number)
     return (base - disc, base + disc)
 end
 
-isinteractive() || begin
+if !isinteractive()
     @testset begin
         lines = filter!(!isempty, split(test, '\n'))
         input = parse_input(lines)

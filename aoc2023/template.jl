@@ -10,7 +10,7 @@ end
 q1(v) = 0
 q2(v) = 0
 
-isinteractive() || begin
+if !isinteractive()
     @testset begin
         lines = split(test, '\n')
         input = parse_input(lines)

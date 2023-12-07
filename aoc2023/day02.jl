@@ -41,7 +41,7 @@ function q2(games)
     end
 end
 
-isinteractive() || begin
+if !isinteractive()
     @testset begin
         lines = split(test, '\n')
         input = parse_input(lines)
