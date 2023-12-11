@@ -9,7 +9,7 @@ test = """
        QQQJA 483
        """
 
-const CARDS = split("123456789TJQKA", "")
+const CARDS = collect("123456789TJQKA")
 const HANDS = ["High card"       => [1, 1, 1, 1, 1]
                "One pair"        => [1, 1, 1, 2]
                "Two pair"        => [1, 2, 2]
@@ -21,7 +21,7 @@ const HANDS = ["High card"       => [1, 1, 1, 1, 1]
 function parse_input(lines::AbstractVector{<: AbstractString})
     return map(lines) do line
         (hand, bid) = split(line)
-        hand = Vector{Int}(indexin(split(hand, ""), CARDS))
+        hand = Vector{Int}(indexin(hand, CARDS))
         return (hand, parse(Int, bid))
     end
 end

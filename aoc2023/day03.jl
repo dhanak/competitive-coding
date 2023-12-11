@@ -14,7 +14,7 @@ test = """
        """
 
 function parse_input(lines::AbstractVector{<: AbstractString})
-    return hcat((only.(split(line, "")) for line in lines)...) |> permutedims
+    return mapreduce(collect, hcat, lines) |> permutedims
 end
 
 function neighbors(ci::CartesianIndex)
@@ -23,38 +23,32 @@ end
 
 function unique_numbers(schematic::Matrix{Char},
                         idxs::AbstractVector{<: CartesianIndex}
-                       )::Vector{<: CartesianIndices}
+                       )::Vector{Int}
     candidates = filter!(idxs ∩ keys(schematic)) do i
         return isdigit(schematic[i])
     end
-    return map(candidates) do i
+    numbers = map(candidates) do i
         (r, c) = i.I
         s = findlast(!isdigit, ['.'; schematic[r, 1:c]])
         e = findfirst(!isdigit, [schematic[r, c:end]; '.']) + c - 2
         @assert all(isdigit, schematic[r, s:e])
         return CartesianIndex(r, s):CartesianIndex(r, e)
     end |> unique!
-end
-
-function get_numbers(schematic::Matrix{Char},
-                     idxs::Vector{<: CartesianIndices}
-                    )::Vector{Int}
-    return map(idxs) do i
-        parse(Int, join(schematic[i], ""))
+    return map(numbers) do i
+        parse(Int, join(schematic[i]))
     end
 end
 
 function q1(schematic::Matrix{Char})::Int
     symbols = findall(∉(['0':'9'; '.']), schematic)
     candidates = mapreduce(neighbors, union, symbols)
-    numbers = unique_numbers(schematic, candidates)
-    return sum(get_numbers(schematic, numbers))
+    return sum(unique_numbers(schematic, candidates))
 end
 
 function q2(schematic::Matrix{Char})::Int
     return sum(findall(==('*'), schematic)) do gear
         numbers = unique_numbers(schematic, neighbors(gear))
-        return length(numbers) == 2 ? prod(get_numbers(schematic, numbers)) : 0
+        return length(numbers) == 2 ? prod(numbers) : 0
     end
 end
 

@@ -14,7 +14,7 @@ function q1((times, dists); solve = poly)
 end
 
 function q2((times, dists); solve = poly)
-    (t, d) = join.((times, dists), "")
+    (t, d) = join.((times, dists))
     return s2i(solve)(t, d)
 end
 
