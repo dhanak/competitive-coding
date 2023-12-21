@@ -28,17 +28,17 @@ moves = [CI(-1, 0), CI(0, 1), CI(1, 0), CI(0, -1)]
 flood((start, garden), n::Integer) = flood(garden, start, n)
 
 function flood(garden, start::CI, n::Integer)
-    steps = [start]
-    next_steps = CI[]
-    for i = 1:n
-        for p in steps
-            valid = [p + m for m in moves if get(garden, p + m, '#') == '.']
-            append!(next_steps, valid)
+    steps = [(start, 0)]
+    for (p, i) in steps
+        i == n && break
+        for m in moves
+            pm = p + m
+            if get(garden, pm, '#') == '.' && !any(==(pm) ∘ first, steps)
+                push!(steps, (pm, i + 1))
+            end
         end
-        steps = unique(next_steps)
-        empty!(next_steps)
     end
-    return steps
+    return [p for (p, i) in steps if i % 2 == n % 2]
 end
 
 floodc(args...) = length(flood(args...))
@@ -59,8 +59,8 @@ function q2((start, garden), steps::Integer)
 
     odds  = floodc(garden, start, s)
     @assert odds == floodc(garden, start, s + 2)
-    evens  = floodc(garden, start, s + 1)
-    @assert evens == floodc(garden, start, s + 3)
+    evens  = floodc(garden, start, s - 1)
+    @assert evens == floodc(garden, start, s + 1)
     full = (n - 1) ^ 2 * odds + n ^ 2 * evens
 
     corners = sum([CI(1, 1), CI(1, s), CI(s, 1), CI(s, s)]) do p
