@@ -1,7 +1,9 @@
 defmodule Mix.Tasks.Day do
   @shortdoc "AoC 2018 Day"
 
-  @test ""
+  @test """
+        """
+        |> String.split("\n", trim: true)
 
   import ExUnit.Assertions
   use Mix.Task
