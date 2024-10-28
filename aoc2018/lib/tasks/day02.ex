@@ -39,8 +39,7 @@ defmodule Mix.Tasks.Day02 do
       triple = triple + if Enum.any?(freqs, &(&1 == 3)), do: 1, else: 0
       {double, triple}
     end)
-    |> Tuple.to_list()
-    |> Enum.product()
+    |> Tuple.product()
   end
 
   def q2(boxes) do
