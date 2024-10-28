@@ -1,18 +1,23 @@
 defmodule Aoc2018 do
-  @moduledoc """
-  Documentation for `Aoc2018`.
-  """
+  import Bitwise
 
   @doc """
-  Hello world.
+  Convert an ASCII letter to upper case.
 
   ## Examples
 
-      iex> Aoc2018.hello()
-      :world
-
+      iex> <<downcase(?A)>>
+      "a"
   """
-  def hello do
-    :world
-  end
+  def downcase(c), do: c ||| 32
+
+  @doc """
+  Convert an ASCII letter to lower case.
+
+  ## Examples
+
+      iex> <<upcase(?a)>>
+      "A"
+  """
+  def upcase(c), do: c &&& bnot(32)
 end
