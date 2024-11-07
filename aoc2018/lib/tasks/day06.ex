@@ -15,6 +15,13 @@ defmodule Mix.Tasks.Day06 do
   import ExUnit.Assertions
   use Mix.Task
 
+  def parse(lines) do
+    coords = Enum.map(lines, &parse_coordinate/1)
+    {l, r} = coords |> Enum.map(&elem(&1, 0)) |> Enum.min_max()
+    {t, b} = coords |> Enum.map(&elem(&1, 1)) |> Enum.min_max()
+    {coords, {l, t, r, b}}
+  end
+
   def parse_coordinate(line) do
     [x, y] =
       line
@@ -27,10 +34,7 @@ defmodule Mix.Tasks.Day06 do
     {x, y}
   end
 
-  def q1(coords) do
-    {l, r} = coords |> Enum.map(&elem(&1, 0)) |> Enum.min_max()
-    {t, b} = coords |> Enum.map(&elem(&1, 1)) |> Enum.min_max()
-
+  def q1({coords, {l, t, r, b}}) do
     grid =
       for x <- l..r, y <- t..b do
         {cs, _} =
@@ -78,9 +82,9 @@ defmodule Mix.Tasks.Day06 do
   end
 
   defp check() do
-    coords = Enum.map(@test, &parse_coordinate/1)
-    assert q1(coords) == 17
-    assert q2(coords) == 0
+    problem = parse(@test)
+    assert q1(problem) == 17
+    assert q2(problem) == 0
   end
 
   def run(_) do
@@ -93,15 +97,15 @@ defmodule Mix.Tasks.Day06 do
       |> List.last()
       |> String.downcase()
 
-    lines =
+    problem =
       File.stream!("input/#{day}.txt", :line)
       |> Stream.map(&String.trim_trailing(&1, "\n"))
-      |> Stream.map(&parse_coordinate/1)
+      |> parse()
 
     {time, _} =
       :timer.tc(fn ->
-        IO.puts("Q1: #{q1(lines)}")
-        IO.puts("Q2: #{q2(lines)}")
+        IO.puts("Q1: #{q1(problem)}")
+        IO.puts("Q2: #{q2(problem)}")
       end)
 
     IO.puts("  #{time / 1_000_000} seconds")

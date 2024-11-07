@@ -8,19 +8,22 @@ defmodule Mix.Tasks.Day05 do
   use Mix.Task
 
   def q1(polymer) do
-    reduced = reduce(polymer)
-    if reduced == polymer, do: length(polymer), else: q1(reduced)
+    polymer |> reduce() |> length()
   end
 
-  def reduce([a, b | polymer]) do
-    if a != b and downcase(a) == downcase(b) do
-      reduce(polymer)
-    else
-      [a | reduce([b | polymer])]
+  def reduce(polymer), do: reduce(polymer, [])
+
+  def reduce([a, b | polymer], reduced) do
+    react? = a != b and downcase(a) == downcase(b)
+
+    case {react?, reduced} do
+      {true, [z | reduced]} -> reduce([z | polymer], reduced)
+      {true, []} -> reduce(polymer, [])
+      {false, _} -> reduce([b | polymer], [a | reduced])
     end
   end
 
-  def reduce(polymer), do: polymer
+  def reduce([a], reduced), do: Enum.reverse([a | reduced])
 
   def q2(polymer) do
     Enum.map(?a..?z, fn unit ->
