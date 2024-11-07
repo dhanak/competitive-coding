@@ -77,14 +77,22 @@ defmodule Mix.Tasks.Day06 do
     s
   end
 
-  def q2(_) do
-    0
+  def q2({coords, {l, t, r, b}}, limit) do
+    for x <- l..r, y <- t..b, reduce: 0 do
+      total ->
+        dist =
+          Enum.reduce(coords, 0, fn coord, sum ->
+            sum + manhattan_distance({x, y}, coord)
+          end)
+
+        if dist < limit, do: total + 1, else: total
+    end
   end
 
   defp check() do
     problem = parse(@test)
     assert q1(problem) == 17
-    assert q2(problem) == 0
+    assert q2(problem, 32) == 16
   end
 
   def run(_) do
@@ -105,7 +113,7 @@ defmodule Mix.Tasks.Day06 do
     {time, _} =
       :timer.tc(fn ->
         IO.puts("Q1: #{q1(problem)}")
-        IO.puts("Q2: #{q2(problem)}")
+        IO.puts("Q2: #{q2(problem, 10000)}")
       end)
 
     IO.puts("  #{time / 1_000_000} seconds")
