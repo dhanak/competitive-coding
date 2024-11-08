@@ -17,10 +17,7 @@ defmodule Mix.Tasks.Day03 do
     [id, l, t, w, h] =
       claim
       |> String.split(~r"[^0-9]+", trim: true)
-      |> Enum.map(fn s ->
-        {v, ""} = Integer.parse(s)
-        v
-      end)
+      |> Enum.map(&String.to_integer/1)
 
     {id, {l, t, w, h}}
   end

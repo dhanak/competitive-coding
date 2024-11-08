@@ -28,7 +28,7 @@ defmodule Mix.Tasks.Day01 do
     values =
       @test
       |> String.split(", ")
-      |> Stream.map(&elem(Integer.parse(&1), 0))
+      |> Enum.map(&String.to_integer/1)
 
     assert q1(values) == 3
     assert q2(values) == 2
@@ -46,7 +46,8 @@ defmodule Mix.Tasks.Day01 do
 
     lines =
       File.stream!("input/#{day}.txt", :line)
-      |> Stream.map(&elem(Integer.parse(&1), 0))
+      |> Stream.map(&String.trim_trailing(&1, "\n"))
+      |> Enum.map(&String.to_integer/1)
 
     {time, _} =
       :timer.tc(fn ->
