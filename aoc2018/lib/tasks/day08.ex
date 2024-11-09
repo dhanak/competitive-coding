@@ -4,6 +4,7 @@ defmodule Mix.Tasks.Day08 do
   @test "2 3 0 3 10 11 12 1 1 0 1 99 2 1 1 2"
 
   import ExUnit.Assertions
+  import Aoc2018
   use Mix.Task
 
   def parse(line) do
@@ -18,8 +19,7 @@ defmodule Mix.Tasks.Day08 do
 
   def parse_node([n_children, n_metadata | values]) do
     {children, values} =
-      1..n_children//1
-      |> Enum.reduce({[], values}, fn _, {children, values} ->
+      repeat({[], values}, n_children, fn {children, values} ->
         {child, values} = parse_node(values)
         {[child | children], values}
       end)

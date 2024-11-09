@@ -59,4 +59,19 @@ defmodule Aoc2018 do
     |> Enum.with_index()
     |> Enum.min_by(&elem(&1, 0), sorter, empty_fallback)
   end
+
+  @doc """
+  Repeatedly apply a function f n times on an initial value.
+
+  ## Examples
+
+    iex> repeat(0, 5, &(&1 + 1))
+    5
+
+    iex> repeat(1, 5, &(&1 * 2))
+    32
+  """
+  def repeat(init, n, f) do
+    Enum.reduce(1..n//1, init, fn _, acc -> f.(acc) end)
+  end
 end
