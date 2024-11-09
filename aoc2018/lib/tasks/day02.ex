@@ -63,16 +63,7 @@ defmodule Mix.Tasks.Day02 do
   def run(_) do
     check()
 
-    day =
-      __MODULE__
-      |> Atom.to_string()
-      |> String.split(".")
-      |> List.last()
-      |> String.downcase()
-
-    lines =
-      File.stream!("input/#{day}.txt", :line)
-      |> Stream.map(&String.trim_trailing(&1, "\n"))
+    lines = Aoc2018.input(__MODULE__)
 
     {time, _} =
       :timer.tc(fn ->

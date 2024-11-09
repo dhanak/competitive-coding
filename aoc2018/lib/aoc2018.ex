@@ -1,6 +1,18 @@
 defmodule Aoc2018 do
   import Bitwise
 
+  def input(module) do
+    day =
+      module
+      |> Atom.to_string()
+      |> String.split(".")
+      |> List.last()
+      |> String.downcase()
+
+    File.stream!("input/#{day}.txt", :line)
+    |> Stream.map(&String.trim_trailing(&1, "\n"))
+  end
+
   @doc """
   Convert an ASCII letter to upper case.
 

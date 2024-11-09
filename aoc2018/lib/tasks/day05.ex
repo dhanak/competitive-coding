@@ -42,16 +42,8 @@ defmodule Mix.Tasks.Day05 do
   def run(_) do
     check()
 
-    day =
-      __MODULE__
-      |> Atom.to_string()
-      |> String.split(".")
-      |> List.last()
-      |> String.downcase()
-
     [line] =
-      File.stream!("input/#{day}.txt", :line)
-      |> Stream.map(&String.trim_trailing(&1, "\n"))
+      Aoc2018.input(__MODULE__)
       |> Enum.map(&String.to_charlist/1)
 
     {time, _} =
