@@ -31,13 +31,13 @@ defmodule Mix.Tasks.Day13 do
         reduce: {%{}, %{}} do
       {tracks, carts} ->
         cond do
-          v in [?\s, ?-, ?|, ?/, ?\\, ?+] ->
+          v in ~C[ -|\/+] ->
             {Map.put(tracks, {x, y}, v), carts}
 
-          v in [?v, ?^] ->
+          v in ~C[^v] ->
             {Map.put(tracks, {x, y}, ?|), Map.put(carts, {x, y}, {v, :left})}
 
-          v in [?<, ?>] ->
+          v in ~C[<>] ->
             {Map.put(tracks, {x, y}, ?-), Map.put(carts, {x, y}, {v, :left})}
         end
     end
@@ -48,16 +48,7 @@ defmodule Mix.Tasks.Day13 do
   def q2(input), do: solve(input, :remove)
 
   def solve({tracks, carts}, strategy) do
-    [halt: at] =
-      carts
-      |> Stream.iterate(&step(&1, tracks, strategy))
-      |> Stream.drop_while(fn
-        {:halt, _} -> false
-        _ -> true
-      end)
-      |> Enum.take(1)
-
-    at
+    Aoc2018.repeat_while(carts, &step(&1, tracks, strategy))
   end
 
   def step(carts, tracks, strategy) do
@@ -69,7 +60,7 @@ defmodule Mix.Tasks.Day13 do
 
     case Map.keys(carts) do
       [c] -> {:halt, c}
-      _ -> carts
+      _ -> {:cont, carts}
     end
   end
 
@@ -87,8 +78,8 @@ defmodule Mix.Tasks.Day13 do
             # no collision, turn as required
             {d, t} =
               case tracks[c] do
-                v when v in [?|, ?-] -> {d, t}
-                v when v in [?/, ?\\] -> {turn(d, v), t}
+                v when v in ~C[-|] -> {d, t}
+                v when v in ~C[\/] -> {turn(d, v), t}
                 ?+ -> {turn(d, t), next_direction(t)}
               end
 

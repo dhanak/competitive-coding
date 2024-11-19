@@ -8,10 +8,9 @@ defmodule Mix.Tasks.Day14 do
 
   def q1(input) do
     recipes =
-      Stream.cycle([nil])
-      |> Enum.reduce_while(@initial_state, fn _, %{recipes: recipes} = state ->
-        if map_size(recipes) >= input + 10 do
-          {:halt, recipes}
+      Aoc2018.repeat_while(@initial_state, fn state ->
+        if map_size(state.recipes) >= input + 10 do
+          {:halt, state.recipes}
         else
           {state, _} = mix(state)
           {:cont, state}
@@ -25,8 +24,7 @@ defmodule Mix.Tasks.Day14 do
   def q2(input) do
     input_length = String.length(input)
 
-    Stream.cycle([nil])
-    |> Enum.reduce_while({@initial_state, "37", 0}, fn _, {state0, tail, n} ->
+    Aoc2018.repeat_while({@initial_state, "37", 0}, fn {state0, tail, n} ->
       {state1, added} = mix(state0)
       tail = tail <> Enum.join(added)
 
@@ -69,7 +67,7 @@ defmodule Mix.Tasks.Day14 do
     {time, _} =
       :timer.tc(fn ->
         IO.puts("Q1: #{q1(input)}")
-        IO.puts("Q2: #{q2(Integer.to_string(input))}")
+        IO.puts("Q2: #{q2(to_string(input))}")
       end)
 
     IO.puts("  #{time / 1_000_000} seconds")

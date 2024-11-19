@@ -14,7 +14,7 @@ defmodule Aoc2018 do
   end
 
   @doc """
-  Convert an ASCII letter to upper case.
+  Convert an ASCII letter `c` to upper case.
 
   ## Examples
 
@@ -24,7 +24,7 @@ defmodule Aoc2018 do
   def downcase(c), do: c ||| 32
 
   @doc """
-  Convert an ASCII letter to lower case.
+  Convert an ASCII letter `c` to lower case.
 
   ## Examples
 
@@ -34,7 +34,7 @@ defmodule Aoc2018 do
   def upcase(c), do: c &&& bnot(32)
 
   @doc """
-  Compute the Manhattan distance between two coordinates
+  Compute the Manhattan distance between two coordinates.
 
   ## Examples
 
@@ -73,7 +73,7 @@ defmodule Aoc2018 do
   end
 
   @doc """
-  Repeatedly apply a function f n times on an initial value.
+  Repeatedly apply a function `fun` `n` times on an initial value `acc`.
 
   ## Examples
 
@@ -83,7 +83,27 @@ defmodule Aoc2018 do
     iex> repeat(1, 5, &(&1 * 2))
     32
   """
-  def repeat(init, n, f) do
-    Enum.reduce(1..n//1, init, fn _, acc -> f.(acc) end)
+  def repeat(acc, n, fun) do
+    Enum.reduce(1..n//1, acc, fn _, acc -> fun.(acc) end)
+  end
+
+  @doc """
+  Repeatedly apply a function `fun` on an initial value `acc`.
+
+  The return value for `fun` is expected to be
+
+  - `{:cont, acc}` to continue with `acc` as the new accumulator
+    or
+  - `{:halt, val}` to halt and return `val`
+
+  ## Examples
+
+      iex> repeat_while(1, fn v ->
+      ...>    if v < 10, do: {:cont, 2 * v}, else: {:halt, to_string(v)}
+      ...> end)
+      "16"
+  """
+  def repeat_while(acc, fun) do
+    Stream.cycle([nil]) |> Enum.reduce_while(acc, fn nil, acc -> fun.(acc) end)
   end
 end
