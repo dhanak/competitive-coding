@@ -106,4 +106,23 @@ defmodule Aoc2018 do
   def repeat_while(acc, fun) do
     Stream.cycle([nil]) |> Enum.reduce_while(acc, fn nil, acc -> fun.(acc) end)
   end
+
+  @doc """
+  Return a permutation list `l` that puts `enumerable` in sorted order,
+  according to the provided `sorter` function.
+
+  ## Examples
+
+      iex> sortperm([3, 1, 2])
+      [1, 2, 0]
+
+      iex> sortperm([:foo, :bar, :baz])
+      [1, 2, 0]
+  """
+  def sortperm(enumerable, sorter \\ :asc) do
+    enumerable
+    |> Enum.with_index()
+    |> Enum.sort_by(&elem(&1, 0), sorter)
+    |> Enum.map(&elem(&1, 1))
+  end
 end
