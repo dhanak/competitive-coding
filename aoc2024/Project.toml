@@ -2,3 +2,9 @@ name = "aoc2024"
 uuid = "65cf4c55-4bda-4020-b65d-4078c022e9c4"
 authors = ["David Hanak <dhanak@gmail.com>"]
 version = "0.1.0"
+
+[deps]
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+
+[compat]
+Statistics = "1.11.1"
