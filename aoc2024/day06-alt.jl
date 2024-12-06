@@ -28,7 +28,7 @@ const MOVES = [CI(-1, 0), CI(0, 1), CI(1, 0), CI(0, -1)]
 q1(input) = count(==('X'), solve(input...))
 
 function q2((arena, guard))::Int
-    return count(findall(==('.'), arena)) do p
+    return count(findall(==('X'), solve(arena, guard))) do p
         arena[p] = '#'
         loops = solve(arena, guard) == :loop
         arena[p] = '.'

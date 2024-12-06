@@ -25,7 +25,7 @@ const MOVES = [CI(-1, 0), CI(0, 1), CI(1, 0), CI(0, -1)]
 q1(input) = solve(input...) .|> first |> unique |> length
 
 function q2((dims, obstacles, guard))::Int
-    candidates = setdiff(CartesianIndices(dims), obstacles, [guard])
+    candidates = solve(dims, obstacles, guard) .|> first |> unique
     return count(candidates) do p
         return solve(dims, obstacles ∪ [p], guard) == :loop
     end
