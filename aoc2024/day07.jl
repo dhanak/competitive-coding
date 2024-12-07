@@ -14,8 +14,8 @@ test = """
 
 function parse_input(lines::AbstractVector{<: AbstractString})
     return map(lines) do line
-        (result, first, rest...) = parse.(Int, split(line, r":? "))
-        (result, first, rest)
+        (result, parts...) = parse.(Int, split(line, r":? "))
+        (result, parts)
     end
 end
 
@@ -29,7 +29,11 @@ function solve(input, ops)
     return sum([eq[1] for eq in input if solvable(ops, eq)])
 end
 
-function solvable(ops, (result, first, rest))
+@static if false
+
+# iterative solution
+
+function solvable(ops, (result, (first, rest...)))
     opsi = fill(0, length(rest))
     part = [first]
     while !isempty(part)
@@ -47,6 +51,25 @@ function solvable(ops, (result, first, rest))
         end
     end
     return false
+end
+
+else
+
+# recursive solution
+
+function solvable(ops, (result, (first, rest...)))
+    return solvable(ops, result, first, rest)
+end
+
+function solvable(ops, result, total, parts)
+    isempty(parts) && return total == result
+    total >= result && return false
+    (next, rest...) = parts
+    return any(ops) do op
+        return solvable(ops, result, op(total, next), rest)
+    end
+end
+
 end
 
 if !isinteractive()
