@@ -1,5 +1,7 @@
 using Test: @testset, @test
 
+using aoc2024
+
 test = """
        RRRRIICCFF
        RRRRIICCCF
@@ -13,24 +15,9 @@ test = """
        MMMISSJEEE
        """
 
-const CI = CartesianIndex{2}
-
 function parse_input(lines::AbstractVector{<: AbstractString})
-    G = permutedims(hcat(collect.(lines)...))
-    grow(G, ' ')
+    return grow(permutedims(hcat(collect.(lines)...)), ' ')
 end
-
-function grow(M::Matrix{T}, with::T, by::Int = 1) where {T}
-    (h, w) = size(M)
-    C = fill(with, by, by)
-    H = fill(with, by, w)
-    V = fill(with, h, by)
-    return [C H C
-            V M V
-            C H C]
-end
-
-const neighbors = [CI(-1, 0), CI(0, 1), CI(1, 0), CI(0, -1)]
 
 q1(garden) = measure(garden, perimeter)
 
@@ -49,7 +36,7 @@ end
 
 function flood(garden::Matrix{Char}, I::CI)::Vector{CI}
     reached = [I]
-    for J in reached, K in J .+ neighbors
+    for J in reached, K in J .+ neighbors4
         garden[K] == garden[J] && K ∉ reached && push!(reached, K)
     end
     return sort!(reached)
@@ -57,13 +44,13 @@ end
 
 function perimeter(plot::Vector{CI})::Int
     return sum(plot) do I
-        return count(∉(plot), I .+ neighbors)
+        return count(∉(plot), I .+ neighbors4)
     end
 end
 
 function sides(plot::Vector{CI})::Int
     fences = []                 # fence bottom and right endpoints
-    for I in plot, (d, J) in enumerate(I .+ neighbors)
+    for I in plot, (d, J) in enumerate(I .+ neighbors4)
         J ∈ plot && continue    # interior edge, skip
         (a, b) = isodd(d) ? I.I : reverse(I.I)
         filter!(!=((d, a, b - 1)), fences)

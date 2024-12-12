@@ -1,5 +1,7 @@
 using Test: @testset, @test
 
+using aoc2024
+
 test = """
        ....#.....
        .........#
@@ -13,14 +15,10 @@ test = """
        ......#...
        """
 
-const CI = CartesianIndex{2}
-
 function parse_input(lines::AbstractVector{<: AbstractString})
-    M = mapreduce(line -> split(line, ""), hcat, lines) |> permutedims
-    return (size(M), Set(findall(==("#"), M)), only(findall(==("^"), M)))
+    M = mapreduce(collect, hcat, lines) |> permutedims
+    return (size(M), Set(findall(==('#'), M)), only(findall(==('^'), M)))
 end
-
-const MOVES = [CI(-1, 0), CI(0, 1), CI(1, 0), CI(0, -1)]
 
 q1(input) = solve(input...) .|> first |> unique |> length
 
@@ -37,7 +35,7 @@ function solve(dims, obstacles, guard)
     while guard ∈ CartesianIndices(dims)
         (guard, dir) ∈ visited && return :loop
         push!(visited, (guard, dir))
-        next = guard + MOVES[dir]
+        next = guard + neighbors4[dir]
         if next ∈ obstacles
             dir = dir % 4 + 1
         else

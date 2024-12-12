@@ -1,5 +1,7 @@
 using Test: @testset, @test
 
+using aoc2024
+
 test = """
        89010123
        78121874
@@ -11,15 +13,11 @@ test = """
        10456732
        """
 
-const CI = CartesianIndex{2}
-
 function parse_input(lines::AbstractVector{<: AbstractString})
     return mapreduce(hcat, lines) do line
         return map(c -> c - '0', collect(line))
     end |> permutedims
 end
-
-neighbors = [CI(-1, 0), CI(0, 1), CI(1, 0), CI(0, -1)]
 
 function q1(M)
     points = findall(==(0), M)
@@ -35,7 +33,7 @@ function trails(M, point)::Dict{CI, Int}
     at = Dict(point => 1)
     while !isempty(at) && M[first(at).first] != 9
         at = mapreduce(mergewith(+), at) do (p, c)
-            next = filter(p .+ neighbors) do n
+            next = filter(p .+ neighbors4) do n
                 return get(M, n, nothing) == M[p] + 1
             end
             return Dict(n => c for n in next)

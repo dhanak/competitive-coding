@@ -1,5 +1,7 @@
 using Test: @testset, @test
 
+using aoc2024
+
 ## A somewhat faster but less compact (and less declarative) variant.
 
 test = """
@@ -15,15 +17,11 @@ test = """
        ......#...
        """
 
-const CI = CartesianIndex{2}
-
 function parse_input(lines::AbstractVector{<: AbstractString})
-    M = mapreduce(line -> collect(line), hcat, lines) |> permutedims
+    M = mapreduce(collect, hcat, lines) |> permutedims
     guard = only(findall(==('^'), M))
     return (M, guard)
 end
-
-const MOVES = [CI(-1, 0), CI(0, 1), CI(1, 0), CI(0, -1)]
 
 q1(input) = count(==('X'), solve(input...))
 
@@ -44,7 +42,7 @@ function solve(arena, guard)
         (guard, dir) ∈ visited && return :loop
         push!(visited, (guard, dir))
         arena[guard] = 'X'
-        next = guard + MOVES[dir]
+        next = guard + neighbors4[dir]
         if next ∉ keys(arena)
             return arena
         elseif arena[next] == '#'

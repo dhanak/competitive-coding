@@ -1,5 +1,6 @@
 using Test: @testset, @test
 
+using aoc2024
 using Combinatorics: combinations
 
 test = """
@@ -16,8 +17,6 @@ test = """
        ............
        ............
        """
-
-const CI = CartesianIndex{2}
 
 function parse_input(lines::AbstractVector{<: AbstractString})
     dims = (length(lines), length(lines[1]))

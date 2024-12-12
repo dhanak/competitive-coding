@@ -1,5 +1,7 @@
 using Test: @testset, @test
 
+using aoc2024
+
 test = """
        """
 
