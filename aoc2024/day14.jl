@@ -75,13 +75,6 @@ function q2(robots)
     return t
 end
 
-function diophantine(a, b, c)
-    (d, u, v) = gcdx(a, b)
-    x0 = u * Int(c / d)
-    y0 = v * Int(c / d)
-    return ((b ÷ d, x0), (-a ÷ d, y0))
-end
-
 if !isinteractive()
     @testset begin
         lines = split(test, '\n'; keepempty = false)

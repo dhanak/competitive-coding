@@ -1,6 +1,6 @@
 module aoc2024
 
-export CI, neighbors4, neighbors8, grow, shrink
+export CI, neighbors4, neighbors8, grow, shrink, diophantine
 
 const CI = CartesianIndex{2}
 
@@ -26,6 +26,13 @@ function shrink(M::AbstractMatrix{T},
                 by::Int = 1
                )::Matrix{T} where {T}
     return M[by + begin:end - by, by + begin:end - by]
+end
+
+function diophantine(a, b, c)
+    (d, u, v) = gcdx(a, b)
+    x0 = u * Int(c / d)
+    y0 = v * Int(c / d)
+    return ((b ÷ d, x0), (-a ÷ d, y0))
 end
 
 end # module aoc2024
