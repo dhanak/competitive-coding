@@ -1,6 +1,7 @@
 using Test: @testset, @test
 
 using aoc2024
+using Combinatorics: combinations
 
 test = """
        p=0,4 v=3,-3
@@ -34,35 +35,47 @@ function q1(robots, d)
         return @. (p + t * (d + v)) % d
     end
     (mx, my) = (w ÷ 2, h ÷ 2)
-    quadrants = reduce(final; init = fill(0, 4)) do qs, (x, y)
-        q = if y < my
-            x < mx ? 1 : x > mx ? 2 : 0
-        elseif y > my
-            x < mx ? 3 : x > mx ? 4 : 0
-        else
-            0
+    Qs = [(0, mx - 1) (mx + 1, w - 1)] .=> [(0, my - 1), (my + 1, h - 1)]
+    quadrants = map(Qs) do ((xmin, xmax), (ymin, ymax))
+        return count(final) do (x, y)
+            return xmin <= x <= xmax && ymin <= y <= ymax
         end
-        if q > 0
-            qs[q] += 1
-        end
-        return qs
     end
     return prod(quadrants)
 end
 
 function q2(robots)
     d = (w, h) = (101, 103)
-    # I observed these values manually by dumping the first 200 pictures:
-    (x0, y0) = (14, 94)
-    # x0 + a*w == y0 + b*h
-    ((ma, ca), (mb, cb)) = diophantine(w, -h, y0 - x0)
+    # find cycles in x and y directions when robots condense
+    freqs = (fill(0, w), fill(0, h))
+    for ((pa, va), (pb, vb)) in combinations(robots, 2)
+        # find t where robots and b coincide (per coordinate)
+        va = @. (va + d) % d
+        vb = @. (vb + d) % d
+        any(@. va == vb) && continue
+        # a and b coincide at t, i.e.: pa + t * va = pb + t * vb
+        t = @. ((d + pb - pa) * invmod(d + va - vb, d)) % d
+        # count occurrence frequencies of t (per coordinate)
+        map(t, freqs) do v, c
+            c[v + 1] += 1
+        end
+    end
+
+    # get most frequent values, i.e., where robots are the densest
+    (tx, ty) = @. argmax(freqs) - 1
+
+    # find t where tx and ty axial offsets with cycle (w, h) coincide
+    # tx + a*w == ty + b*h
+    ((ma, ca), (mb, cb)) = diophantine(w, -h, ty - tx)
     @assert ca > 0 && cb > 0
     k = ca ÷ abs(ma)
     a = ma * k + ca
     b = mb * k + cb
     @assert a > 0 && b > 0 && a - abs(ma) < 0 && b - abs(mb) < 0
-    t = x0 + a * w
-    @assert t == y0 + b * h
+    t = tx + a * w
+    @assert t == ty + b * h
+
+    # draw (just to be sure that we have the correct answer)
     final = map(robots) do (p, v)
         return @. (p + t * (d + v)) % d
     end
@@ -72,6 +85,7 @@ function q2(robots)
         end
         println()
     end
+
     return t
 end
 
