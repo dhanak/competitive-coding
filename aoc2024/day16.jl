@@ -22,7 +22,7 @@ test = """
        """
 
 function parse_input(lines::AbstractVector{<: AbstractString})
-    M = map(collect, lines) |> Base.splat(hcat) |> permutedims
+    M::Matrix{Char} = lines
     (s, e) = [findfirst(==(c), M) for c in "SE"]
     M[[s, e]] .= '.'
     return (M, s, e)
@@ -32,12 +32,12 @@ q1((M, start, goal)) = first(solve(M, start, goal))
 
 function q2((M, start, goal))::Int
     (_, paths) = solve(M, start, goal)
-    open = collect(filter(==(goal) ∘ first, keys(paths)))
-    for p in open
+    queue = collect(filter(==(goal) ∘ first, keys(paths)))
+    for p in queue
         (_, parents) = get(paths, p, (0, []))
-        append!(open, parents)
+        append!(queue, parents)
     end
-    return open .|> first |> unique |> length
+    return queue .|> first |> unique |> length
 end
 
 const Node = Tuple{CI, Int}

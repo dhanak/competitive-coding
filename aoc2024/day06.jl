@@ -16,7 +16,7 @@ test = """
        """
 
 function parse_input(lines::AbstractVector{<: AbstractString})
-    M = mapreduce(collect, hcat, lines) |> permutedims
+    M::Matrix{Char} = lines
     return (size(M), Set(findall(==('#'), M)), only(findall(==('^'), M)))
 end
 

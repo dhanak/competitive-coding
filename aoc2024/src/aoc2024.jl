@@ -9,6 +9,23 @@ const neighbors8 = [CI(-1, -1), CI(-1, 0), CI(-1, 1),
                     CI( 0, -1),            CI( 0, 1),
                     CI( 1, -1), CI( 1, 0), CI( 1, 1)]
 
+function Base.convert(::Type{Matrix{Char}},
+                      lines::AbstractVector{<: AbstractString}
+                     )::Matrix{Char}
+    return mapreduce(collect, hcat, lines) |> permutedims
+end
+
+function Base.findall(needle::Matrix, haystack::Matrix; ignore = isnothing)
+    (w, h) = size(needle)
+    (W, H) = size(haystack)
+    Js = findall(!ignore, needle)
+    return findall(CartesianIndices((W - w + 1, H - h + 1))) do I
+        return all(Js) do J
+            needle[J] == haystack[I + J - CartesianIndex(1, 1)]
+        end
+    end
+end
+
 function grow(M::AbstractMatrix{T},
               with = zero(T),
               by::Int = 1

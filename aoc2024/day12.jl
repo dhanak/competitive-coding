@@ -15,8 +15,8 @@ test = """
        MMMISSJEEE
        """
 
-function parse_input(lines::AbstractVector{<: AbstractString})
-    return grow(permutedims(hcat(collect.(lines)...)), ' ')
+function parse_input(lines::AbstractVector{<: AbstractString})::Matrix{Char}
+    return grow(convert(Matrix{Char}, lines), ' ')
 end
 
 q1(garden) = measure(garden, perimeter)

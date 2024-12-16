@@ -1,4 +1,6 @@
 using Test: @testset, @test
+
+using aoc2024
 using Statistics: mean
 
 test = """
@@ -14,39 +16,28 @@ test = """
        MXMXAXMASX
        """
 
-function parse_input(lines::AbstractVector{<: AbstractString})
-    return mapreduce(line -> split(line, ""), hcat, lines) |> permutedims
-end
-
-function Base.findall(needle::Matrix, haystack::Matrix; ignore = isnothing)
-    (w, h) = size(needle)
-    (W, H) = size(haystack)
-    Js = findall(!ignore, needle)
-    return findall(CartesianIndices((W - w + 1, H - h + 1))) do I
-        return all(Js) do J
-            needle[J] == haystack[I + J - CartesianIndex(1, 1)]
-        end
-    end
+function parse_input(lines::AbstractVector{<: AbstractString})::Matrix{Char}
+    return lines
 end
 
 const _N_ = nothing
 const ROTATIONS = [identity, rotr90, rotr90 ∘ rotr90, rotl90]
 
 function q1(A)
-    HXMAS = ["X" "M" "A" "S"]
-    DXMAS = ["X" _N_ _N_ _N_
-             _N_ "M" _N_ _N_
-             _N_ _N_ "A" _N_
-             _N_ _N_ _N_ "S"]
+    HXMAS = ['X' 'M' 'A' 'S']
+    DXMAS = ['X' _N_ _N_ _N_
+             _N_ 'M' _N_ _N_
+             _N_ _N_ 'A' _N_
+             _N_ _N_ _N_ 'S']
     return sum(ROTATIONS) do rot
         return sum(length, [findall(rot(HXMAS), A), findall(rot(DXMAS), A)])
     end
 end
 
 function q2(A)
-    X_MAS = ["M" _N_ "M"
-             _N_ "A" _N_
-             "S" _N_ "S"]
+    X_MAS = ['M' _N_ 'M'
+             _N_ 'A' _N_
+             'S' _N_ 'S']
     return sum(ROTATIONS) do rot
         return length(findall(rot(X_MAS), A))
     end
@@ -71,7 +62,7 @@ end
 
 function rot45(A)
     (h, w) = size(A)
-    B = fill(" ", h + w - 1, h + w - 1)
+    B = fill(' ', h + w - 1, h + w - 1)
     for y = 1:h, x = 1:w
         B[y + x - 1, h - y + x] = A[y, x]
     end
@@ -91,7 +82,7 @@ function q2(A)
     length(l ∩ r)
 end
 
-end
+end # module Overcomplicated...
 
 if !isinteractive()
     @testset begin

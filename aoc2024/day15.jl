@@ -28,7 +28,7 @@ test = """
 
 function parse_input(lines::AbstractVector{<: AbstractString})
     br = findfirst(isempty, lines)
-    M = map(collect, lines[1:br - 1]) |> Base.splat(hcat) |> permutedims
+    M::Matrix{Char} = lines[1:br - 1]
     boxes = findall(==('O'), M)
     robot = findall(==('@'), M) |> only
     M[[boxes; robot]] .= '.'
