@@ -22,6 +22,7 @@ mutable struct State
     regs::Vector{Int}
     ip::Int
     out::Vector{Int}
+    State(a::Int = 0, b::Int = 0, c::Int = 0) = new([a, b, c], 0, [])
 end
 
 function parse_input(lines::AbstractVector{<: AbstractString})
@@ -32,7 +33,7 @@ function parse_input(lines::AbstractVector{<: AbstractString})
     end
     @assert startswith(lines[5], "Program")
     program = parse.(Int, split(lines[5], r": |,")[2:end])
-    return (State(regs, 0, []), program)
+    return (regs, program)
 end
 
 function combo(st::State, op::Int)
@@ -50,51 +51,41 @@ out(st, op) = (push!(st.out, combo(st, op) % 8)        ; nothing)
 bdv(st, op) = (st.regs[2] = st.regs[1] >> combo(st, op); nothing)
 cdv(st, op) = (st.regs[3] = st.regs[1] >> combo(st, op); nothing)
 
-const INST = [adv, bxl, bst, jnz, bxc, out, bdv, cdv]
+const instructions = [adv, bxl, bst, jnz, bxc, out, bdv, cdv]
 
-function q1((st, program))
-    st = deepcopy(st)
-    run(st, program)
-    return join(st.out, ',')
-end
+q1((regs, program)) = join(run(State(regs...), program), ',')
 
 function run(st, program)
     while st.ip < length(program)
-        inst = INST[program[st.ip + 1] + 1]
+        inst = instructions[program[st.ip + 1] + 1]
         op = program[st.ip + 2]
         if inst(st, op) === nothing
             st.ip += 2
         end
     end
+    return st.out
 end
 
 function q2((_, program))
     # program ends with "adv 3, out ?, jnz 0", drop jump from end
     @assert program[[(end - 5:end - 3); (end - 1:end)]] == [0, 3, 5, 3, 0]
-    return q2([], program[1:end - 2], reverse(program))
+    return q2(0, program[1:end - 2], reverse(program))
 end
 
-function q2(A, program, output)
-    isempty(output) && return A_as_int(A)
+function q2(a, program, output)
+    isempty(output) && return a
     (o, output...) = output
-    for a in valid_a(A, program, o)
-        v = q2([A; a], program, output)
-        v !== nothing && return v
+    for a in valid_a(a, program, o)
+        a = q2(a, program, output)
+        a !== nothing && return a
     end
     return nothing
 end
 
-function valid_a(A, program, o)
-    return filter(0:7) do a
-        st = State([A_as_int([A; a]), 0, 0], 0, [])
-        run(st, program)
-        return st.out == [o]
-    end
-end
-
-function A_as_int(A)
-    return reduce(A; init = 0) do A, a
-        return A << 3 + a
+function valid_a(a, program, o)
+    a = a << 3
+    return filter(a:a + 7) do a
+        return run(State(a), program) == [o]
     end
 end
 
