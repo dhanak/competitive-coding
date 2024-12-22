@@ -15,7 +15,9 @@ function Base.convert(::Type{Matrix{Char}},
     return mapreduce(collect, hcat, lines) |> permutedims
 end
 
-function Base.findall(needle::Matrix, haystack::Matrix; ignore = isnothing)
+function Base.findall(needle::AbstractMatrix,
+                      haystack::AbstractMatrix;
+                      ignore = isnothing)
     (w, h) = size(needle)
     (W, H) = size(haystack)
     Js = findall(!ignore, needle)
