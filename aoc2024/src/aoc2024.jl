@@ -1,6 +1,6 @@
 module aoc2024
 
-export CI, neighbors4, neighbors8, grow, shrink, diophantine
+export CI, neighbors4, neighbors8, grow, shrink, diophantine, blocks
 
 const CI = CartesianIndex{2}
 
@@ -52,6 +52,21 @@ function diophantine(a, b, c)
     x0 = u * Int(c / d)
     y0 = v * Int(c / d)
     return ((b ÷ d, x0), (-a ÷ d, y0))
+end
+
+function blocks(lines::AbstractVector{<: T}
+               )::Vector{Vector{T}} where {T <: AbstractString}
+    return blocks(isempty, lines)
+end
+
+function blocks(sep::Function,
+                lines::AbstractVector{T}
+               )::Vector{Vector{T}} where {T <: AbstractString}
+    lines = lines[findfirst(!sep, lines):findlast(!sep, lines)]
+    @assert !isempty(lines)
+    breaks = findall(sep, lines)
+    ranges = range.([1; breaks .+ 1], [breaks .- 1; length(lines)])
+    return getindex.(Ref(lines), ranges)
 end
 
 end # module aoc2024
