@@ -2,52 +2,144 @@ defmodule Mix.Tasks.Day16 do
   @shortdoc "AoC 2018 Day 16"
 
   @test """
-        Before: [3, 2, 1, 1]
-        9 2 1 2
-        After:  [3, 2, 2, 1]
-
-
-
-        """
-        |> String.split("\n")
+  Before: [3, 2, 1, 1]
+  9 2 1 2
+  After:  [3, 2, 2, 1]
+  """
 
   import ExUnit.Assertions
   import Bitwise
   use Mix.Task
+  require Xpeg
 
-  def parse(lines) do
-    [samples, program] = Enum.join(lines, "\n") |> String.split("\n\n\n")
+  def parse(input), do: nimble_parse(input)
+
+  defmodule Parser do
+    import NimbleParsec
+
+    def map_from_list(l), do: Map.new(Enum.with_index(l, fn v, i -> {i, v} end))
+
+    registers =
+      ignore(string("["))
+      |> integer(min: 1)
+      |> repeat(ignore(string(", ")) |> integer(min: 1))
+      |> ignore(string("]"))
+      |> wrap()
+      |> map(:map_from_list)
+
+    instruction =
+      repeat(ignore(repeat(string(" "))) |> integer(min: 1)) |> wrap()
+
+    sample =
+      ignore(string("Before: "))
+      |> unwrap_and_tag(registers, :before)
+      |> ignore(string("\n"))
+      |> unwrap_and_tag(instruction, :inst)
+      |> ignore(string("\n"))
+      |> ignore(string("After:  "))
+      |> unwrap_and_tag(registers, :after)
+      |> ignore(string("\n"))
+
+    samples =
+      wrap(sample)
+      |> repeat(ignore(string("\n")) |> wrap(sample))
+      |> map({Map, :new, []})
+
+    program = repeat(instruction |> ignore(string("\n")))
+
+    input =
+      wrap(samples)
+      |> optional(ignore(string("\n\n\n")) |> wrap(program))
+      |> eos()
+
+    defparsec(:input, input)
+  end
+
+  def nimble_parse(text) do
+    [:ok, input | _] =
+      Parser.input(text)
+      |> Tuple.to_list()
+
+    case input do
+      [samples] -> {samples, []}
+      [samples, program] -> {samples, program}
+    end
+  end
+
+  def xpeg_parse(text) do
+    grammar =
+      Xpeg.peg Input do
+        Input <- Samples * opt("\n\n\n" * Program)
+
+        Samples <-
+          Sample * fn [v | cs] -> [[v] | cs] end *
+            star("\n" * Sample * fn [v, l | cs] -> [[v | l] | cs] end) *
+            fn [l | cs] -> [Enum.reverse(l) | cs] end
+
+        Program <-
+          Instruction * fn [v | cs] -> [[v] | cs] end *
+            star("\n" * Instruction * fn [v, l | cs] -> [[v | l] | cs] end) *
+            fn [l | cs] -> [Enum.reverse(l) | cs] end
+
+        Sample <-
+          "Before: " * Registers * "\n" *
+            Instruction * "\n" *
+            "After:  " * Registers * "\n" *
+            fn [a, i, b | cs] -> [%{before: b, inst: i, after: a} | cs] end
+
+        Registers <-
+          "[" * Int * fn [v | cs] -> [%{0 => v} | cs] end *
+            star(
+              ", " * Int *
+                fn [v, r | cs] -> [Map.put(r, map_size(r), v) | cs] end
+            ) * "]"
+
+        Instruction <-
+          Int * fn [v | cs] -> [[v] | cs] end *
+            star(" " * Int * fn [v, l | cs] -> [[v | l] | cs] end) *
+            fn [l | cs] -> [Enum.reverse(l) | cs] end
+
+        Int <- int(+{[?0]..[?9]})
+      end
+
+    case Xpeg.match(grammar, text).captures do
+      [samples] -> {samples, []}
+      [program, samples] -> {samples, program}
+    end
+  end
+
+  def plain_parse(text) do
+    [samples | programs] = String.split(text, "\n\n\n\n")
 
     samples =
       samples
       |> String.split("\n", trim: true)
-      |> Enum.filter(&(&1 != ""))
       |> Enum.chunk_every(3)
       |> Enum.map(&parse_sample/1)
 
     program =
-      program
-      |> String.split("\n", trim: true)
-      |> Enum.map(fn line ->
-        line
-        |> String.split(" ")
-        |> Enum.map(fn s ->
-          {i, ""} = Integer.parse(s)
-          i
-        end)
-      end)
+      case programs do
+        [] ->
+          []
+
+        [program] ->
+          program
+          |> String.split("\n", trim: true)
+          |> Enum.map(fn line ->
+            line
+            |> String.split(" ")
+            |> Enum.map(&String.to_integer/1)
+          end)
+      end
 
     {samples, program}
   end
 
-  def parse_sample(["Before: " <> pre, inst, "After: " <> post]) do
-    [op, a, b, c] =
-      String.split(inst, " ")
-      |> Enum.map(&elem(Integer.parse(&1), 0))
-
+  def parse_sample(["Before: " <> pre, inst, "After:  " <> post]) do
+    inst = inst |> String.split(" ") |> Enum.map(&String.to_integer/1)
     pre = parse_registers(pre)
     post = parse_registers(post)
-    %{before: pre, inst: [op, a, b, c], after: post}
+    %{before: pre, inst: inst, after: post}
   end
 
   def parse_registers(s) do
@@ -153,7 +245,10 @@ defmodule Mix.Tasks.Day16 do
   def run(_) do
     check()
 
-    {samples, program} = Aoc2018.input(__MODULE__) |> Enum.to_list() |> parse()
+    {samples, program} =
+      Aoc2018.input(__MODULE__)
+      |> then(fn l -> Enum.join(l, "\n") <> "\n" end)
+      |> parse()
 
     {time, _} =
       :timer.tc(fn ->
