@@ -18,6 +18,7 @@ defmodule Mix.Tasks.Day18 do
   import ExUnit.Assertions
   use Mix.Task
 
+  @spec parse(Enum.t()) :: map()
   def parse(lines) do
     for {line, y} <- Enum.with_index(lines),
         {acre, x} <- Enum.with_index(String.graphemes(line)),
@@ -31,6 +32,7 @@ defmodule Mix.Tasks.Day18 do
     end
   end
 
+  @spec adjacent(map(), {integer(), integer()}) :: map()
   def adjacent(area, {y, x}) do
     for dy <- -1..1, dx <- -1..1, {y + dy, x + dx} != {y, x}, into: [] do
       Map.get(area, {y + dy, x + dx})
@@ -40,6 +42,7 @@ defmodule Mix.Tasks.Day18 do
     |> then(&Map.merge(%{open: 0, tree: 0, yard: 0}, &1))
   end
 
+  @spec update(map()) :: map()
   def update(area) do
     Enum.map(area, fn {c, old} ->
       new =
@@ -55,6 +58,7 @@ defmodule Mix.Tasks.Day18 do
     |> Map.new()
   end
 
+  @spec dump(IO.device(), map()) :: :ok
   def dump(io \\ :stdio, area) do
     s = trunc(:math.sqrt(map_size(area))) - 1
 
@@ -76,6 +80,7 @@ defmodule Mix.Tasks.Day18 do
     :ok
   end
 
+  @spec q1(input :: map(), n :: integer()) :: integer()
   def q1(input, n \\ 10) do
     %{tree: t, yard: l} =
       input
@@ -86,6 +91,11 @@ defmodule Mix.Tasks.Day18 do
     t * l
   end
 
+  @spec q2(
+          input :: map(),
+          memo :: %{map() => integer()},
+          round :: integer()
+        ) :: integer()
   def q2(input, memo \\ %{}, round \\ 0) do
     case Map.get(memo, input) do
       nil ->
