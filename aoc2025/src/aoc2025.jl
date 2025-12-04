@@ -8,9 +8,9 @@ const CI = CartesianIndex{2}
 
 const neighbors4 = [CI(-1, 0), CI(0, 1), CI(1, 0), CI(0, -1)]
 const neighbors8 = [
-    CI(-1, -1), CI(-1, 0), CI(-1, 1),
-    CI(0, -1), CI(0, 1),
-    CI(1, -1), CI(1, 0), CI(1, 1),
+    CI(-1, -1), CI(-1, +0), CI(-1, +1),
+    CI(+0, -1), #=========# CI(+0, +1),
+    CI(+1, -1), CI(+1, +0), CI(+1, +1),
 ]
 
 function Base.convert(
