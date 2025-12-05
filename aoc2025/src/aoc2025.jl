@@ -1,6 +1,16 @@
 module aoc2025
 
-export CI, neighbors4, neighbors8, grow, shrink, diophantine, blocks, @pr
+export
+    @pr,
+    CI,
+    add_interval,
+    add_interval!,
+    blocks,
+    diophantine,
+    grow,
+    neighbors4,
+    neighbors8,
+    shrink
 
 using MacroTools
 
@@ -12,6 +22,16 @@ const neighbors8 = [
     CI(+0, -1), #=========# CI(+0, +1),
     CI(+1, -1), CI(+1, +0), CI(+1, +1),
 ]
+
+macro pr(expr, label = "")
+    sexpr = string(MacroTools.postwalk(MacroTools.rmlines, expr))
+    return quote
+        let v = $(esc(expr))
+            println($(label), $(sexpr), " = ", v)
+            v
+        end
+    end
+end
 
 function Base.convert(
         ::Type{Matrix{Char}},
@@ -82,14 +102,28 @@ function blocks(
     return getindex.(Ref(lines), ranges)
 end
 
-macro pr(expr, label = "")
-    sexpr = string(MacroTools.postwalk(MacroTools.rmlines, expr))
-    return quote
-        let v = $(esc(expr))
-            println($(label), $(sexpr), " = ", v)
-            v
+function add_interval(intervals::AbstractVector, (a, b))
+    isempty(intervals) && return [a => b]
+    ((c, d), rest...) = intervals
+    b < c - 1 && return [a => b, intervals...]
+    a <= d + 1 && return add_interval(rest, min(a, c) => max(b, d))
+    return [c => d, add_interval(rest, a => b)...]
+end
+
+function add_interval!(intervals::AbstractVector, (a, b))
+    i = 1
+    while i <= length(intervals)
+        (c, d) = intervals[i]
+        if b < c - 1
+            return insert!(intervals, i, a => b)
+        elseif a <= d + 1
+            (a, b) = min(a, c) => max(b, d)
+            deleteat!(intervals, i)
+        else
+            i += 1
         end
     end
+    return push!(intervals, a => b)
 end
 
 end # module aoc2025
