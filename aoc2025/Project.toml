@@ -5,6 +5,10 @@ authors = ["David Hanak <dhanak@gmail.com>"]
 
 [deps]
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+UnionFind = "99c6138d-4661-531e-8606-19bf1ec96588"
 
 [compat]
 MacroTools = "0.5.16"
+OrderedCollections = "1.8.1"
+UnionFind = "0.1.0"
