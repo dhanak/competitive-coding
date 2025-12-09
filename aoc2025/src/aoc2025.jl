@@ -3,14 +3,24 @@ module aoc2025
 export
     @pr,
     CI,
-    add_interval,
     add_interval!,
+    add_interval,
     blocks,
+    cross,
     diophantine,
+    dot,
     grow,
+    grow_poly,
+    intersection,
     neighbors4,
     neighbors8,
-    shrink
+    norm,
+    norm_sq,
+    normalize,
+    point_on_segment,
+    shrink,
+    ×,
+    ⋅
 
 using MacroTools
 
@@ -124,6 +134,44 @@ function add_interval!(intervals::AbstractVector, (a, b))
         end
     end
     return push!(intervals, a => b)
+end
+
+cross((x1, y1), (x2, y2)) = x1 * y2 - x2 * y1
+×(a, b) = cross(a, b)
+
+dot(a, b) = a .* b
+⋅(a, b) = a .* b
+
+function grow_poly(poly::AbstractVector; by::Number)::Vector
+    return map(poly[[end; 1:(end - 1)]], poly, poly[[2:end; 1]]) do a, b, c
+        v1 = b .- a
+        v2 = b .- c
+        d = (normalize(v1) .+ normalize(v2)) .* by
+        return b .+ (d .* sign(v2 × v1))
+    end
+end
+
+norm_sq(v) = sum(v .^ 2)
+
+norm(v)::Float64 = v |> norm_sq |> sqrt
+
+normalize(v) = v ./ norm(v)
+
+function point_on_segment(point, (a, b))::Float64
+    v1 = point .- a
+    v2 = b .- a
+    return sum(v1 ⋅ v2) / norm_sq(v2)
+end
+
+function intersection((a, b), (c, d))
+    line(p1, p2) = (p2 .- p1, p1 × p2)
+    (d1, D1) = line(a, b)
+    (d2, D2) = line(c, d)
+    D = d1 × d2
+    D == 0 && return nothing
+    Dx = (d1[1], d2[1]) × (D1, D2)
+    Dy = (d1[2], d2[2]) × (D1, D2)
+    return (Dx, Dy) ./ D
 end
 
 end # module aoc2025

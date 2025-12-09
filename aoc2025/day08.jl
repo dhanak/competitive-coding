@@ -39,8 +39,6 @@ function parse_input(lines::AbstractVector{<:AbstractString})
     return (boxes, last.(sort!(dists)))
 end
 
-norm_sq(v::AbstractVector{<:Number}) = sum(v .^ 2)
-
 function q1((boxes, conns), n::Integer)::Int
     uf = UnionFinder{Int}(length(boxes))
     union!(uf, conns[1:n])
