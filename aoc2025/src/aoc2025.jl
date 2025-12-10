@@ -37,7 +37,7 @@ macro pr(expr, label = "")
     sexpr = string(MacroTools.postwalk(MacroTools.rmlines, expr))
     return quote
         let v = $(esc(expr))
-            println($(label), $(sexpr), " = ", v)
+            println($(esc(label)), $(sexpr), " = ", v)
             v
         end
     end
