@@ -19,6 +19,7 @@ export
     normalize,
     point_on_segment,
     shrink,
+    topological_sort,
     ×,
     ⋅
 
@@ -172,6 +173,22 @@ function intersection((a, b), (c, d))
     Dx = (d1[1], d2[1]) × (D1, D2)
     Dy = (d1[2], d2[2]) × (D1, D2)
     return (Dx, Dy) ./ D
+end
+
+function topological_sort(graph::AbstractDict{T})::Vector{T} where {T}
+    # topological ordering of a DAG
+    topo = T[]
+    visited = Set{T}()
+    function dfs(node::T)::Nothing
+        if node ∉ visited
+            push!(visited, node)
+            foreach(dfs, get(graph, node, []))
+            pushfirst!(topo, node)
+        end
+        return nothing
+    end
+    foreach(dfs, keys(graph))
+    return topo
 end
 
 end # module aoc2025

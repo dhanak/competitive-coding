@@ -14,7 +14,7 @@ q2(v) = 0
 
 if !isinteractive()
     @testset begin
-        local lines = split(test, '\n')
+        local lines = split(test, '\n'; keepempty = false)
         local input = parse_input(lines)
         @test q1(input) == 0
         @test q2(input) == 0
